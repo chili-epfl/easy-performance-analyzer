@@ -17,7 +17,7 @@
 
 /**
  * @file easy-profiler.cpp
- * @brief
+ * @brief Simple instrumentation profiler
  * @author Ayberk Özgür
  * @date 2014-10-15
  */
@@ -30,18 +30,29 @@ std::string EasyProfiler::androidTag = "EASYPROFILER";
 
 void EasyProfiler::startProfiling(const std::string& blockName)
 {
-    blocks.insert(StrClkPair(blockName,clock()));
+    Timespec* begin = new Timespec();
+    blocks.insert(StrClkPair(blockName,begin));
+
+    //Get time after insertion to bypass its execution time
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID,begin);
 }
 
 void EasyProfiler::endProfiling(const std::string& blockName)
 {
-    clock_t endt = clock();
-    Str2Clk::const_iterator pairIt = blocks.find(blockName);
+    Timespec end;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID,&end);
+    Str2Clk::iterator pairIt = blocks.find(blockName);
     if(pairIt == blocks.end())
-        EZP_OMNIPRINT("Can't find %s, did you call startProfiling() on %s?", blockName.c_str(), blockName.c_str());
+        EZP_OMNIPRINT("Can't find %s, did you call EZP_START() on %s?\n", blockName.c_str(), blockName.c_str());
     else{
-        endt = endt - pairIt->second;
-        EZP_OMNIPRINT("%s took %.2f ms",blockName.c_str(),(float)endt/CLOCKS_PER_SEC*1000);
+        EZP_OMNIPRINT("%s took %.2f ms\n",blockName.c_str(),getTimeDiff(pairIt->second,&end));
+        blocks.erase(pairIt);
+        delete pairIt->second;
     }
+}
+
+inline float EasyProfiler::getTimeDiff(const Timespec* begin, const Timespec* end)
+{
+    return (float)(end->tv_sec - begin->tv_sec)*1000.0f + (float)((end->tv_nsec - begin->tv_nsec)/10000)/100.0f;
 }
 

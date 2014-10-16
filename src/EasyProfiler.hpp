@@ -17,7 +17,7 @@
 
 /**
  * @file easy-profiler.hpp
- * @brief 
+ * @brief Simple instrumentation profiler
  * @author Ayberk Özgür
  * @date 2014-10-15
  */
@@ -35,35 +35,45 @@
 #include<cstdio>
 #endif
 
-typedef std::map<std::string,clock_t> Str2Clk;
-typedef std::pair<std::string,clock_t> StrClkPair;
+typedef struct timespec Timespec;
+typedef std::map<std::string,Timespec*> Str2Clk;
+typedef std::pair<std::string,Timespec*> StrClkPair;
 
 /**
- * @brief 
+ * @brief Simple instrumentation profiler that relies on CPU clocks
  */
 class EasyProfiler{
 public:
 
     /**
-     * @brief 
+     * @brief Starts a named profile
      *
-     * @param blockName
+     * @param blockName Name of the profile
      */
     static void startProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
-     * @brief 
+     * @brief Ends the named profile, it must have been started before
      *
-     * @param blockName
+     * @param blockName Name of the profile
      */
     static void endProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
-    static std::string androidTag;  ///< 
+    static std::string androidTag;  ///< Logcat tag on Android
 
 private:
 
-    static Str2Clk blocks;          ///< 
+    /**
+     * @brief Gets the time difference between two times
+     *
+     * @param begin Beginning time
+     * @param end Ending time
+     *
+     * @return Difference in milliseconds, 2 digits precision after the decimal point
+     */
+    static float getTimeDiff(const Timespec* begin, const Timespec* end);
 
+    static Str2Clk blocks;          ///< Names and beginning times of profile blocks
 };
 
 #ifdef ANDROID
@@ -72,7 +82,19 @@ private:
 #define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
 #endif
 
-#define EZP_START(BLOCK_NAME) EasyProfiler::startProfiling(BLOCK_NAME)
-#define EZP_END(BLOCK_NAME) EasyProfiler::endProfiling(BLOCK_NAME)
+/**
+ * @brief Sets the Logcat tag on Android
+ */
+#define EZP_SET_ANDROID_TAG(TAG) EasyProfiler::androidTag = TAG;
+
+/**
+ * @brief Alias for EasyProfiler::startProfiling()
+ */
+#define EZP_START(BLOCK_NAME) EasyProfiler::startProfiling(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfiling()
+ */
+#define EZP_END(BLOCK_NAME) EasyProfiler::endProfiling(BLOCK_NAME);
 
 #endif /* EASY_PROFILER_HPP */
