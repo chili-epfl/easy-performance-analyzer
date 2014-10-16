@@ -22,8 +22,8 @@
  * @date 2014-10-15
  */
 
-#ifndef EASY_PROFILER_HPP
-#define EASY_PROFILER_HPP
+#ifndef EASYPROFILER_HPP
+#define EASYPROFILER_HPP
 
 #include<ctime>
 #include<map>
@@ -68,9 +68,9 @@ public:
     static void startProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
-     * @brief 
+     * @brief Starts a named profile that is smoothed over time
      *
-     * @param blockName
+     * @param blockName Name of the profile
      */
     static void startProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK");
 
@@ -82,10 +82,10 @@ public:
     static void endProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
-     * @brief 
+     * @brief  Ends a named smoothed profile, it must have been started before
      *
-     * @param blockName
-     * @param smoothingFactor
+     * @param blockName Name of the profile
+     * @param smoothingFactor Coefficient of the history, between 0 and 1
      */
     static void endProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK", float smoothingFactor = 0.95f);
 
@@ -99,12 +99,12 @@ private:
      * @param begin Beginning time
      * @param end Ending time
      *
-     * @return Difference in milliseconds, 2 digits precision after the decimal point
+     * @return Difference in milliseconds
      */
     static float getTimeDiff(const Timespec* begin, const Timespec* end);
 
     static Str2Clk blocks;              ///< Names and beginning times of profile blocks
-    static Str2SMarker smoothBlocks;    ///< Names, beginning times, latest time slices and update factors of smoothed profile blocks
+    static Str2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed profile blocks
 };
 
 #ifdef ANDROID
@@ -124,7 +124,7 @@ private:
 #define EZP_START(BLOCK_NAME) EasyProfiler::startProfiling(BLOCK_NAME);
 
 /**
- * @brief 
+ * @brief Alias for EasyProfiler::startProfilingSmooth()
  */
 #define EZP_START_SMOOTH(BLOCK_NAME) EasyProfiler::startProfilingSmooth(BLOCK_NAME);
 
@@ -134,13 +134,13 @@ private:
 #define EZP_END(BLOCK_NAME) EasyProfiler::endProfiling(BLOCK_NAME);
 
 /**
- * @brief 
+ * @brief Alias for EasyProfiler::endProfilingSmooth() with default smoothing factor
  */
 #define EZP_END_SMOOTH(BLOCK_NAME) EasyProfiler::endProfilingSmooth(BLOCK_NAME);
 
 /**
- * @brief 
+ * @brief Alias for EasyProfiler::endProfilingSmooth() with custom smoothing factor 
  */
 #define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
 
-#endif /* EASY_PROFILER_HPP */
+#endif /* EASYPROFILER_HPP */
