@@ -35,9 +35,24 @@
 #include<cstdio>
 #endif
 
+#define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
+
 typedef struct timespec Timespec;
+
 typedef std::map<std::string,Timespec*> Str2Clk;
 typedef std::pair<std::string,Timespec*> StrClkPair;
+
+typedef struct SmoothMarker_
+{
+    Timespec beginTime;
+    float lastSlice;
+
+    SmoothMarker_(){ lastSlice = 0.0f; }
+}
+SmoothMarker;
+
+typedef std::map<std::string,SmoothMarker*> Str2SMarker;
+typedef std::pair<std::string,SmoothMarker*> Str2SMarkerPair;
 
 /**
  * @brief Simple instrumentation profiler that relies on CPU clocks
@@ -53,13 +68,28 @@ public:
     static void startProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
+     * @brief 
+     *
+     * @param blockName
+     */
+    static void startProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK");
+
+    /**
      * @brief Ends the named profile, it must have been started before
      *
      * @param blockName Name of the profile
      */
     static void endProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
-    static std::string androidTag;  ///< Logcat tag on Android
+    /**
+     * @brief 
+     *
+     * @param blockName
+     * @param smoothingFactor
+     */
+    static void endProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK", float smoothingFactor = 0.95f);
+
+    static std::string androidTag;      ///< Logcat tag on Android
 
 private:
 
@@ -73,11 +103,12 @@ private:
      */
     static float getTimeDiff(const Timespec* begin, const Timespec* end);
 
-    static Str2Clk blocks;          ///< Names and beginning times of profile blocks
+    static Str2Clk blocks;              ///< Names and beginning times of profile blocks
+    static Str2SMarker smoothBlocks;    ///< Names, beginning times, latest time slices and update factors of smoothed profile blocks
 };
 
 #ifdef ANDROID
-#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyProfiler::androidTag, __VA_ARGS__)
+#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyProfiler::androidTag.c_str(), __VA_ARGS__)
 #else
 #define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
 #endif
@@ -93,8 +124,23 @@ private:
 #define EZP_START(BLOCK_NAME) EasyProfiler::startProfiling(BLOCK_NAME);
 
 /**
+ * @brief 
+ */
+#define EZP_START_SMOOTH(BLOCK_NAME) EasyProfiler::startProfilingSmooth(BLOCK_NAME);
+
+/**
  * @brief Alias for EasyProfiler::endProfiling()
  */
 #define EZP_END(BLOCK_NAME) EasyProfiler::endProfiling(BLOCK_NAME);
+
+/**
+ * @brief 
+ */
+#define EZP_END_SMOOTH(BLOCK_NAME) EasyProfiler::endProfilingSmooth(BLOCK_NAME);
+
+/**
+ * @brief 
+ */
+#define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
 
 #endif /* EASY_PROFILER_HPP */
