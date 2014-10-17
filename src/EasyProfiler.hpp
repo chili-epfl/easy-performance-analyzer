@@ -25,6 +25,64 @@
 #ifndef EASYPROFILER_HPP
 #define EASYPROFILER_HPP
 
+///////////////////////////////////////////////////////////////////////////////
+//Public API
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Sets the Logcat tag on Android
+ */
+#define EZP_SET_ANDROID_TAG(TAG) ezp::EasyProfiler::androidTag = TAG;
+
+/**
+ * @brief Alias for EasyProfiler::startProfiling()
+ */
+#define EZP_START(BLOCK_NAME) ezp::EasyProfiler::startProfiling(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfiling()
+ */
+#define EZP_END(BLOCK_NAME) ezp::EasyProfiler::endProfiling(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::startProfilingSmooth()
+ */
+#define EZP_START_SMOOTH(BLOCK_NAME) ezp::EasyProfiler::startProfilingSmooth(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfilingSmooth() with default smoothing factor
+ */
+#define EZP_END_SMOOTH(BLOCK_NAME) ezp::EasyProfiler::endProfilingSmooth(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfilingSmooth() with custom smoothing factor
+ */
+#define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) ezp::EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
+
+/**
+ * @brief Alias for EasyProfiler::startProfilingOffline()
+ */
+#define EZP_START_OFFLINE(BLOCK_NAME) ezp::EasyProfiler::startProfilingOffline(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfilingOffline()
+ */
+#define EZP_END_OFFLINE(BLOCK_NAME) ezp::EasyProfiler::endProfilingOffline(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::printOfflineProfiles()
+ */
+#define EZP_PRINT_OFFLINE ezp::EasyProfiler::printOfflineProfiles();
+
+/**
+ * @brief Alias for EasyProfiler::clearOfflineProfiles()
+ */
+#define EZP_CLEAR_OFFLINE ezp::EasyProfiler::clearOfflineProfiles();
+
+///////////////////////////////////////////////////////////////////////////////
+//Private API
+///////////////////////////////////////////////////////////////////////////////
+
 #include<ctime>
 #include<map>
 #include<string>
@@ -37,49 +95,70 @@
 #include<cstdio>
 #endif
 
+namespace ezp{
+
 #define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
 
 typedef struct timespec Timespec;
 
-typedef std::map<std::string,Timespec*> Str2Clk;
-typedef std::pair<std::string,Timespec*> StrClkPair;
+/**
+ * @brief Holds a smooth profile record
+ */
+struct SmoothMarker_t{
+    Timespec beginTime; ///< When the most recent profile was started
+    float lastSlice;    ///< Most recent smoothed time that this profile took, i.e history
 
-typedef struct SmoothMarker_
-{
-    Timespec beginTime;
-    float lastSlice;
+    /**
+     * @brief Creates a new smooth profile record with zero history
+     */
+    SmoothMarker_t(){ lastSlice = 0.0f; }
+};
 
-    SmoothMarker_(){ lastSlice = 0.0f; }
-}
-SmoothMarker;
+/**
+ * @brief Holds the total amount of time a profile took in the past
+ */
+struct AggregateMarker_t{
+    Timespec beginTime; ///< When the most recent profile was started
+    float totalTime;    ///< Total time that this profile took in the past
+    int numSamples;     ///< How many times this profile was done in the past
 
-typedef std::map<std::string,SmoothMarker*> Str2SMarker;
-typedef std::pair<std::string,SmoothMarker*> Str2SMarkerPair;
+    /**
+     * @brief Creates a new aggregate profile with zero history
+     */
+    AggregateMarker_t(){ totalTime = 0.0f; numSamples = 0; }
+};
 
-typedef struct AggregateMarker_
-{
-    Timespec beginTime;
-    float totalTime;
-    int numSamples;
+/**
+ * @brief Brings AggregateMarker and block name together in a sortable object
+ */
+struct AggregateProfile_t{
+    std::string blockName;  ///< Name of the profile
+    float averageTime;      ///< Average time the profile took in the past
+    int numSamples;         ///< How many times this profile was done in the past
 
-    AggregateMarker_(){ totalTime = 0.0f; numSamples = 0; }
-}
-AggregateMarker;
-
-typedef std::map<std::string,AggregateMarker*> Str2AMarker;
-typedef std::pair<std::string,AggregateMarker*> Str2AMarkerPair;
-
-typedef struct AggregateProfile_
-{
-    std::string blockName;
-    float averageTime;
-    int numSamples;
-
-    static bool compare(const struct AggregateProfile_& one, const struct AggregateProfile_& two){
+    /**
+     * @brief Compares two AggregateProfiles on their average times for sorting purposes
+     *
+     * @param one First compared profile
+     * @param two Second compared profile
+     *
+     * @return Whether first took more average time than the second
+     */
+    static bool compare(const struct AggregateProfile_t& one, const struct AggregateProfile_t& two)
+    {
         return one.averageTime > two.averageTime;
     }
-}
-AggregateProfile;
+};
+
+typedef struct SmoothMarker_t SmoothMarker;
+typedef struct AggregateMarker_t AggregateMarker;
+typedef struct AggregateProfile_t AggregateProfile;
+typedef std::map<std::string,Timespec*> Str2Clk;
+typedef std::pair<std::string,Timespec*> StrClkPair;
+typedef std::map<std::string,SmoothMarker*> Str2SMarker;
+typedef std::pair<std::string,SmoothMarker*> Str2SMarkerPair;
+typedef std::map<std::string,AggregateMarker*> Str2AMarker;
+typedef std::pair<std::string,AggregateMarker*> Str2AMarkerPair;
 
 /**
  * @brief Simple instrumentation profiler that relies on CPU clocks
@@ -165,54 +244,7 @@ private:
 #define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
 #endif
 
-/**
- * @brief Sets the Logcat tag on Android
- */
-#define EZP_SET_ANDROID_TAG(TAG) EasyProfiler::androidTag = TAG;
-
-/**
- * @brief Alias for EasyProfiler::startProfiling()
- */
-#define EZP_START(BLOCK_NAME) EasyProfiler::startProfiling(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::endProfiling()
- */
-#define EZP_END(BLOCK_NAME) EasyProfiler::endProfiling(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::startProfilingSmooth()
- */
-#define EZP_START_SMOOTH(BLOCK_NAME) EasyProfiler::startProfilingSmooth(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::endProfilingSmooth() with default smoothing factor
- */
-#define EZP_END_SMOOTH(BLOCK_NAME) EasyProfiler::endProfilingSmooth(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::endProfilingSmooth() with custom smoothing factor
- */
-#define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
-
-/**
- * @brief Alias for EasyProfiler::startProfilingOffline()
- */
-#define EZP_START_OFFLINE(BLOCK_NAME) EasyProfiler::startProfilingOffline(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::endProfilingOffline()
- */
-#define EZP_END_OFFLINE(BLOCK_NAME) EasyProfiler::endProfilingOffline(BLOCK_NAME);
-
-/**
- * @brief Alias for EasyProfiler::printOfflineProfiles()
- */
-#define EZP_PRINT_OFFLINE EasyProfiler::printOfflineProfiles();
-
-/**
- * @brief Alias for EasyProfiler::clearOfflineProfiles()
- */
-#define EZP_CLEAR_OFFLINE EasyProfiler::clearOfflineProfiles();
+} /* namespace ezp */
 
 #endif /* EASYPROFILER_HPP */
+

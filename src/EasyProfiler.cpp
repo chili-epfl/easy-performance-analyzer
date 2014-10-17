@@ -24,6 +24,8 @@
 
 #include"EasyProfiler.hpp"
 
+namespace ezp{
+
 ///////////////////////////////////////////////////////////////////////////////
 //Static members
 ///////////////////////////////////////////////////////////////////////////////
@@ -130,7 +132,7 @@ void EasyProfiler::printOfflineProfiles()
         itt->numSamples = its->second->numSamples;
         itt->averageTime = its->second->totalTime/itt->numSamples;
     }
-    std::sort(sortedProfiles.begin(),sortedProfiles.end(),AggregateProfile_::compare);
+    std::sort(sortedProfiles.begin(),sortedProfiles.end(),AggregateProfile::compare);
 
     //Do the printing
     std::string spaces(maxNameLen - 4, ' ');
@@ -150,4 +152,6 @@ inline float EasyProfiler::getTimeDiff(const Timespec* begin, const Timespec* en
 {
     return (float)(end->tv_sec - begin->tv_sec)*1000.0f + (float)(end->tv_nsec - begin->tv_nsec)/1000000.0f;
 }
+
+} /* namespace ezp */
 
