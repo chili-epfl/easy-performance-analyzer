@@ -124,5 +124,5 @@ API Summary
 Samples
 -------
 
-Coming soon..
+To build samples, enable `WITH_SAMPLES` during build. See [samples/README.md](samples/README.md) for more details.
 
