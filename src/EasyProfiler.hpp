@@ -95,7 +95,7 @@ public:
     static void startProfiling(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
-     * @brief Ends the named profile, it must have been started before
+     * @brief Ends the named profile, printing the running time of the block; it must have been started before
      *
      * @param blockName Name of the profile
      */
@@ -109,20 +109,35 @@ public:
     static void startProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK");
 
     /**
-     * @brief  Ends a named smoothed profile, it must have been started before
+     * @brief  Ends a named smoothed profile, printing the running time of the block; it must have been started before
      *
      * @param blockName Name of the profile
      * @param smoothingFactor Coefficient of the history, between 0 and 1
      */
     static void endProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK", float smoothingFactor = 0.95f);
 
-
+    /**
+     * @brief Starts a named offline profile that keeps the total running time and number of calls
+     *
+     * @param blockName Name of the profile
+     */
     static void startProfilingOffline(const std::string& blockName = "UNNAMED_BLOCK");
 
+    /**
+     * @brief Ends a named offline profile, it must have been smoothed before
+     *
+     * @param blockName Name of the profile
+     */
     static void endProfilingOffline(const std::string& blockName = "UNNAMED_BLOCK");
 
+    /**
+     * @brief Prints all data of all offline profiles up to now
+     */
     static void printOfflineProfiles();
 
+    /**
+     * @brief Clears the offline profile record
+     */
     static void clearOfflineProfiles();
 
     static std::string androidTag;      ///< Logcat tag on Android
@@ -180,10 +195,24 @@ private:
  */
 #define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
 
-
+/**
+ * @brief Alias for EasyProfiler::startProfilingOffline()
+ */
 #define EZP_START_OFFLINE(BLOCK_NAME) EasyProfiler::startProfilingOffline(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::endProfilingOffline()
+ */
 #define EZP_END_OFFLINE(BLOCK_NAME) EasyProfiler::endProfilingOffline(BLOCK_NAME);
+
+/**
+ * @brief Alias for EasyProfiler::printOfflineProfiles()
+ */
 #define EZP_PRINT_OFFLINE EasyProfiler::printOfflineProfiles();
+
+/**
+ * @brief Alias for EasyProfiler::clearOfflineProfiles()
+ */
 #define EZP_CLEAR_OFFLINE EasyProfiler::clearOfflineProfiles();
 
 #endif /* EASYPROFILER_HPP */
