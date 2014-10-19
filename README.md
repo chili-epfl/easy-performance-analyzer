@@ -23,7 +23,55 @@ make install
 Android Build
 -------------
 
-Coming soon...
+You'll need the **Android SDK** (tested with Android platform version 14, i.e Android 4.0) and **Android NDK** (tested with r9d).
+
+These instructions assume `armv7-a` target architecture. For other architectures, adapt the instructions to your liking.
+
+1. Export a standalone NDK toolchain:
+
+  ```
+  cd /path-to-android-ndk
+  ./build/tools/make-standalone-toolchain.sh \
+      --platform=android-14 \
+      --install-dir=/desired-path-to-android-standalone-toolchain \
+      --toolchain=arm-linux-androideabi-4.8
+  ```
+
+  Be aware that if you don't have write access to `/desired/path/to/android/standalone/toolchain`, the script fails silently.
+
+2. Set up the following environment variables:
+
+  ```
+  export ANDROID_HOME=/path-to-android-sdk/
+  export ANDROID_SDK_ROOT=$ANDROID_HOME
+  export ANDROID_SDK=$ANDROID_SDK_ROOT
+  export ANDROID_NDK_ROOT=/path-to-android-ndk/
+  export ANDROID_NDK_STANDALONE_TOOLCHAIN=/path-to-android-standalone-toolchain/
+  export ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_NDK_STANDALONE_TOOLCHAIN
+  export ANDROID_ABI=armeabi-v7a
+  export ANDROID_NATIVE_API_LEVEL=14
+  export ANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.8
+  ```
+
+  Make sure that the `ANDROID_NDK` environment variable is **not set** before proceeding.
+
+3. In the `easy-profiler` source directory:
+
+  ```
+  mkdir build-android
+  cd build-android
+  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/android.toolchain.cmake
+  make -j 5
+  make install
+  ```
+
+Now `easy-profiler` is installed in your standalone toolchain under `/path-to-android-standalone-toolchain/sysroot/usr/` just like a regular library. To build an example user program, execute:
+
+```
+/path-to-android-standalone-toolchain/bin/arm-linux-androideabi-g++ input.cpp -o example-program -leasyprofiler -llog
+```
+
+Please note that you have to link `log` yourself when compiling if it's not automatically being linked by your build system. See the samples for more details.
 
 How to use
 ----------

@@ -9,10 +9,25 @@ Here are the current samples:
 Linux Build
 -----------
 
-Enable `WITH_SAMPLES` during usual build. Samples are not installed, launch them from inside `samples/` in the build directory.
+Enable `WITH_SAMPLES` during usual build (enabled by default). Samples are not installed, launch them from inside the `samples/bin/` directory.
 
 Android Build
 -------------
 
-Coming soon...
+Enable `WITH_SAMPLES` during usual build (enabled by default). Samples are not installed, but placed inside the `samples/bin/` directory. To launch e.g `real-time`, connect your **rooted** device, launch a DDMS instance and execute:
+
+```
+cd samples/bin/
+adb push real-time /sdcard/
+adb shell
+```
+
+From inside the adb shell, execute:
+
+```
+su
+/sdcard/real-time
+```
+
+The output will be printed to logcat in the DDMS instance under the tag `EASYPROFILER`.
 

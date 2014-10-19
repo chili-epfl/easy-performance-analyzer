@@ -22,5 +22,6 @@ install(FILES src/EasyProfiler.hpp DESTINATION include)
 #Samples
 if(WITH_SAMPLES)
     add_subdirectory(samples)
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/samples/bin/ CACHE PATH "Output directory for sample binaries")
 endif()
 
