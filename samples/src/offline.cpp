@@ -16,10 +16,10 @@
  */
 
 /**
- * @file real-time.cpp
- * @brief easy-profiler demo that shows basic real-time usage
+ * @file offline.cpp
+ * @brief easy-profiler demo that shows basic offline usage
  * @author Ayberk Özgür
- * @date 2014-10-17
+ * @date 2014-10-19
  */
 
 #include<EasyProfiler.hpp>
@@ -27,25 +27,27 @@
 int main(){
     int* y = new int;
 
-    EZP_START("ALL")
+    EZP_START_OFFLINE("ALL")
     for(int i=0;i<100;i++){
 
-        EZP_START("LP1")
+        EZP_START_OFFLINE("LP1")
         for(int j=0;j<10000000;j++){
             *y += 28138481u;
             *y = 623415232 % *y;
         }
-        EZP_END("LP1")
+        EZP_END_OFFLINE("LP1")
 
-        EZP_START_SMOOTH("LP2")
+        EZP_START_OFFLINE("LP2")
         for(int j=0;j<10000000;j++){
             *y += 51;
             *y = *y % 101;
         }
-        EZP_END_SMOOTH("LP2")
+        EZP_END_OFFLINE("LP2")
 
     }
-    EZP_END("ALL")
+    EZP_END_OFFLINE("ALL")
+
+    EZP_PRINT_OFFLINE
 
     return 0;
 }

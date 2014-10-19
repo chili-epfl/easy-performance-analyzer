@@ -45,12 +45,12 @@ pthread_mutex_t EasyProfiler::offlineLock = PTHREAD_MUTEX_INITIALIZER;
 ///////////////////////////////////////////////////////////////////////////////
 
 //This function is time critical!
-void EasyProfiler::startProfiling(const std::string& blockName)
+void EasyProfiler::startProfiling(const char* blockName)
 {
     //Get time in the very end to disturb the measurements the least possible
     Timespec* begin = new Timespec();
 
-    BlkClkPair pair(BlockKey(EZP_GET_TID, blockName), begin);
+    BlkClkPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
 
     pthread_mutex_lock(&lock);
     std::pair<Blk2Clk::iterator, bool> result = blocks.insert(pair);
@@ -73,36 +73,36 @@ void EasyProfiler::startProfiling(const std::string& blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfiling(const std::string& blockName)
+void EasyProfiler::endProfiling(const char* blockName)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK, &end);
 
     TID tid = EZP_GET_TID;
-    BlockKey key(tid, blockName);
+    BlockKey key(tid, hashStr(blockName));
 
     pthread_mutex_lock(&lock);
     Blk2Clk::iterator pairIt = blocks.find(key);
     if(pairIt == blocks.end()){
         pthread_mutex_unlock(&lock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START(\"%s\")?\n", blockName.c_str(), blockName.c_str());
+        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START(\"%s\")?\n", blockName, blockName);
     }
     else{
         Timespec* begin = pairIt->second;
         pthread_mutex_unlock(&lock);
 
-        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName.c_str(), getTimeDiff(begin,&end));
+        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName, getTimeDiff(begin,&end));
     }
 }
 
 //This function is time critical!
-void EasyProfiler::startProfilingSmooth(const std::string& blockName)
+void EasyProfiler::startProfilingSmooth(const char* blockName)
 {
     //Get time in the very end to disturb the measurements the least possible
     SmoothMarker* begin = new SmoothMarker();
 
-    Blk2SMarkerPair pair(BlockKey(EZP_GET_TID, blockName), begin);
+    Blk2SMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
 
     pthread_mutex_lock(&smoothLock);
     std::pair<Blk2SMarker::iterator, bool> result = smoothBlocks.insert(pair);
@@ -125,37 +125,37 @@ void EasyProfiler::startProfilingSmooth(const std::string& blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfilingSmooth(const std::string& blockName, float sf)
+void EasyProfiler::endProfilingSmooth(const char* blockName, float sf)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
 
     TID tid = EZP_GET_TID;
-    BlockKey key(tid, blockName);
+    BlockKey key(tid, hashStr(blockName));
 
     pthread_mutex_lock(&smoothLock);
     Blk2SMarker::iterator pairIt = smoothBlocks.find(key);
     if(pairIt == smoothBlocks.end()){
         pthread_mutex_unlock(&smoothLock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_SMOOTH(\"%s\")?\n", blockName.c_str(), blockName.c_str());
+        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_SMOOTH(\"%s\")?\n", blockName, blockName);
     }
     else{
         float slice = sf*pairIt->second->lastSlice + (1.0f - sf)*getTimeDiff(&(pairIt->second->beginTime),&end);
         pairIt->second->lastSlice = slice;
         pthread_mutex_unlock(&smoothLock);
 
-        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName.c_str(), slice);
+        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName, slice);
     }
 }
 
 //This function is time critical!
-void EasyProfiler::startProfilingOffline(const std::string& blockName)
+void EasyProfiler::startProfilingOffline(const char* blockName)
 {
     //Get time in the very end to disturb the measurements the least possible
     AggregateMarker* begin = new AggregateMarker();
 
-    Blk2AMarkerPair pair(BlockKey(EZP_GET_TID, blockName), begin);
+    Blk2AMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
 
     pthread_mutex_lock(&offlineLock);
     std::pair<Blk2AMarker::iterator, bool> result = offlineBlocks.insert(pair);
@@ -178,19 +178,19 @@ void EasyProfiler::startProfilingOffline(const std::string& blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfilingOffline(const std::string& blockName)
+void EasyProfiler::endProfilingOffline(const char* blockName)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
 
-    BlockKey key(EZP_GET_TID, blockName);
+    BlockKey key(EZP_GET_TID, hashStr(blockName));
 
     pthread_mutex_lock(&offlineLock);
     Blk2AMarker::iterator pairIt = offlineBlocks.find(key);
     if(pairIt == offlineBlocks.end()){
         pthread_mutex_unlock(&offlineLock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_OFFLINE(\"%s\")?\n", blockName.c_str(), blockName.c_str());
+        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_OFFLINE(\"%s\")?\n", blockName, blockName);
     }
     else{
         pairIt->second->numSamples++;
@@ -210,12 +210,9 @@ void EasyProfiler::printOfflineProfiles()
 
     //Transfer offline profiles into sortable data structure and find max block name length
     std::vector<AggregateProfile> sortedProfiles(offlineBlocks.size());
-    int maxNameLen = 0;
     Blk2AMarker::iterator its = offlineBlocks.begin();
     std::vector<AggregateProfile>::iterator itt = sortedProfiles.begin();
     for(; its != offlineBlocks.end(); its++, itt++){
-        if(its->first.blockName.length() > maxNameLen)
-            maxNameLen = its->first.blockName.length();
         itt->tid = its->first.tid;
         itt->blockName = its->first.blockName;
         itt->numSamples = its->second->numSamples;
@@ -227,17 +224,17 @@ void EasyProfiler::printOfflineProfiles()
     std::sort(sortedProfiles.begin(),sortedProfiles.end(),AggregateProfile::compareAvgTime);
 
     //Do the thread-wise printing
-    std::string spaces(maxNameLen - 4, ' ');
-    std::string dashes(maxNameLen - 4, '-');
-    std::string equals(maxNameLen - 4, '=');
-    EZP_OMNIPRINT("%s=======================================================================\n", equals.c_str());
+    EZP_OMNIPRINT("=======================================================================\n");
     EZP_OMNIPRINT("Thread-wise profile results\n");
-    EZP_OMNIPRINT("-------------%s----------------------------------------------------------\n", dashes.c_str());
-    EZP_OMNIPRINT("Thread ID    %sName    Average(ms)         Total(ms)           Calls     \n", spaces.c_str());
-    EZP_OMNIPRINT("-------------%s----------------------------------------------------------\n", dashes.c_str());
-    for(std::vector<AggregateProfile>::iterator it = sortedProfiles.begin(); it != sortedProfiles.end(); it++)
-        EZP_OMNIPRINT("%9d    %*s    %-16.2f    %-16.2f    %-10d\n",
-                it->tid, maxNameLen, it->blockName.c_str(), it->averageTime, it->averageTime*it->numSamples, it->numSamples);
+    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    EZP_OMNIPRINT("Thread ID    Name    Average(ms)         Total(ms)           Calls     \n");
+    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    char cbuf[5];
+    for(std::vector<AggregateProfile>::iterator it = sortedProfiles.begin(); it != sortedProfiles.end(); it++){
+        unhashStr(it->blockName,cbuf);
+        EZP_OMNIPRINT("%9d    %4s    %-16.2f    %-16.2f    %-10d\n",
+                it->tid, cbuf, it->averageTime, it->averageTime*it->numSamples, it->numSamples);
+    }
 
     //Sort according to block name for summing
     std::sort(sortedProfiles.begin(),sortedProfiles.end(),AggregateProfile::compareBlockName);
@@ -248,7 +245,7 @@ void EasyProfiler::printOfflineProfiles()
     totalProfiles.push_back(SummedProfile(itS->blockName, itS->averageTime*itS->numSamples, itS->numSamples));
     itS++;
     for(;itS!=sortedProfiles.end();itS++)
-        if(itS->blockName.compare(totalProfiles.back().blockName) == 0){
+        if(itS->blockName == totalProfiles.back().blockName){
             totalProfiles.back().totalTime += itS->averageTime*itS->numSamples;
             totalProfiles.back().numSamples += itS->numSamples;
         }
@@ -259,15 +256,17 @@ void EasyProfiler::printOfflineProfiles()
     std::sort(totalProfiles.begin(),totalProfiles.end(),SummedProfile::compare);
 
     //Print summed profiles
-    EZP_OMNIPRINT("%s=======================================================================\n", equals.c_str());
+    EZP_OMNIPRINT("=======================================================================\n");
     EZP_OMNIPRINT("Summed results across threads\n");
-    EZP_OMNIPRINT("%s-----------------------------------------------------------------------\n", dashes.c_str());
-    EZP_OMNIPRINT("%sName    Average(ms)         Total(ms)           Calls                  \n", spaces.c_str());
-    EZP_OMNIPRINT("%s-----------------------------------------------------------------------\n", dashes.c_str());
-    for(std::vector<SummedProfile>::iterator it = totalProfiles.begin(); it != totalProfiles.end(); it++)
-        EZP_OMNIPRINT("%*s    %-16.2f    %-16.2f    %-10d\n",
-                maxNameLen, it->blockName.c_str(), it->totalTime/it->numSamples, it->totalTime, it->numSamples);
-    EZP_OMNIPRINT("%s=======================================================================\n", equals.c_str());
+    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    EZP_OMNIPRINT("Name    Average(ms)         Total(ms)           Calls                  \n");
+    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    for(std::vector<SummedProfile>::iterator it = totalProfiles.begin(); it != totalProfiles.end(); it++){
+        unhashStr(it->blockName,cbuf);
+        EZP_OMNIPRINT("%4s    %-16.2f    %-16.2f    %-10d\n",
+                cbuf, it->totalTime/it->numSamples, it->totalTime, it->numSamples);
+    }
+    EZP_OMNIPRINT("=======================================================================\n");
 }
 
 //This function is not time critical
@@ -279,9 +278,53 @@ void EasyProfiler::clearOfflineProfiles()
     pthread_mutex_unlock(&offlineLock);
 }
 
+//This function is time critical!
 inline float EasyProfiler::getTimeDiff(const Timespec* begin, const Timespec* end)
 {
     return (float)(end->tv_sec - begin->tv_sec)*1000.0f + (float)(end->tv_nsec - begin->tv_nsec)/1000000.0f;
+}
+
+//This function is time critical!
+inline unsigned int EasyProfiler::hashStr(const char* str)
+{
+    unsigned int result = 0;
+
+    result += str[0];
+    if(str[1] == '\0')
+        return result << 24;
+    result = result << 8;
+
+    result += str[1];
+    if(str[2] == '\0')
+        return result << 16;
+    result = result << 8;
+
+    result += str[2];
+    if(str[3] == '\0')
+        return result << 8;
+    result = result << 8;
+
+    result += str[3];
+    if(str[4] != '\0')
+        EZP_OMNIPRINT("EZP ERROR: Block name %s is too long, truncating to 4 characters; consider shortening the name for better performance\n", str);
+    return result;
+}
+
+//This function is time critical!
+inline void EasyProfiler::unhashStr(unsigned int hash, char* output)
+{
+    output[4] = '\0';
+
+    output[3] = hash;
+    hash = hash >> 8;
+
+    output[2] = hash;
+    hash = hash >> 8;
+
+    output[1] = hash;
+    hash = hash >> 8;
+
+    output[0] = hash;
 }
 
 } /* namespace ezp */

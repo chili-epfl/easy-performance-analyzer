@@ -116,15 +116,15 @@ typedef struct timespec Timespec;
  */
 struct BlockKey_t{
     TID tid;                ///< Thread ID of the block's caller
-    std::string blockName;  ///< Name of the block
+    unsigned int blockName; ///< Hash of name of the block
 
     /**
      * @brief Creates a new profile record key
      *
      * @param tid_ Thread ID of the block's caller
-     * @param blockName_ Name of the block
+     * @param blockName_ Hash of the name of the block
      */
-    BlockKey_t(TID tid_, const std::string& blockName_){
+    BlockKey_t(TID tid_, unsigned int blockName_){
         tid = tid_;
         blockName = blockName_;
     }
@@ -139,7 +139,7 @@ struct BlockKey_t{
      */
     static bool compare(const struct BlockKey_t& one, const struct BlockKey_t& two){
         if(one.tid == two.tid)
-            return one.blockName.compare(two.blockName) > 0;
+            return one.blockName > two.blockName;
         else
             return one.tid > two.tid;
     }
@@ -177,7 +177,7 @@ struct AggregateMarker_t{
  */
 struct AggregateProfile_t{
     TID tid;                ///< Thread ID
-    std::string blockName;  ///< Name of the profile
+    unsigned int blockName; ///< Hash of the name of the profile
     float averageTime;      ///< Average time the profile took in the past
     int numSamples;         ///< How many times this profile was done in the past
 
@@ -204,7 +204,7 @@ struct AggregateProfile_t{
      */
     static bool compareBlockName(const struct AggregateProfile_t& one, const struct AggregateProfile_t& two)
     {
-        return one.blockName.compare(two.blockName) < 0;
+        return one.blockName < two.blockName;
     }
 };
 
@@ -212,18 +212,18 @@ struct AggregateProfile_t{
  * @brief Sum of profiles coming from different threads
  */
 struct SummedProfile_t{
-    std::string blockName;  ///< Name of the profile
+    unsigned int blockName; ///< Hash of the name of the profile
     float totalTime;        ///< Total time this profile took
     int numSamples;         ///< Total number of times this profile was done
 
     /**
      * @brief Initializes a new summed profile
      *
-     * @param blockName_ Name of the profile
+     * @param blockName_ Hash of the name of the profile
      * @param totalTime_ Initial total time coming from a thread
      * @param numSamples_ Initial number of times this profile was done, coming from a thread
      */
-    SummedProfile_t(const std::string& blockName_, float totalTime_, int numSamples_){
+    SummedProfile_t(unsigned int blockName_, float totalTime_, int numSamples_){
         blockName = blockName_;
         totalTime = totalTime_;
         numSamples = numSamples_;
@@ -265,45 +265,45 @@ public:
     /**
      * @brief Starts a named profile
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      */
-    static void startProfiling(const std::string& blockName = "UNNAMED_BLOCK");
+    static void startProfiling(const char* blockName = "NDEF");
 
     /**
      * @brief Ends the named profile, printing the running time of the block; it must have been started before
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      */
-    static void endProfiling(const std::string& blockName = "UNNAMED_BLOCK");
+    static void endProfiling(const char* blockName = "NDEF");
 
     /**
      * @brief Starts a named profile that is smoothed over time
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      */
-    static void startProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK");
+    static void startProfilingSmooth(const char* blockName = "NDEF");
 
     /**
      * @brief  Ends a named smoothed profile, printing the running time of the block; it must have been started before
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      * @param smoothingFactor Coefficient of the history, between 0 and 1
      */
-    static void endProfilingSmooth(const std::string& blockName = "UNNAMED_BLOCK", float smoothingFactor = 0.95f);
+    static void endProfilingSmooth(const char* blockName = "NDEF", float smoothingFactor = 0.95f);
 
     /**
      * @brief Starts a named offline profile that keeps the total running time and number of calls
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      */
-    static void startProfilingOffline(const std::string& blockName = "UNNAMED_BLOCK");
+    static void startProfilingOffline(const char* blockName = "NDEF");
 
     /**
      * @brief Ends a named offline profile, it must have been smoothed before
      *
-     * @param blockName Name of the profile
+     * @param blockName Name of the profile, max 4 characters
      */
-    static void endProfilingOffline(const std::string& blockName = "UNNAMED_BLOCK");
+    static void endProfilingOffline(const char* blockName = "NDEF");
 
     /**
      * @brief Prints all data of all offline profiles up to now
@@ -328,6 +328,23 @@ private:
      * @return Difference in milliseconds
      */
     static float getTimeDiff(const Timespec* begin, const Timespec* end);
+
+    /**
+     * @brief Hashes a string of maximum length 4 into an int uniquely
+     *
+     * @param str String of maximum length 4
+     *
+     * @return Unique hash of given string
+     */
+    static unsigned int hashStr(const char* str);
+
+    /**
+     * @brief Unhashes a string of length 4 from its unique hash
+     *
+     * @param hash Unique hash of length 4 string
+     * @param output Preallocated buffer to write string to, must be at least 5 characters long
+     */
+    static void unhashStr(unsigned int hash, char* output);
 
     static Blk2Clk blocks;              ///< Names and beginning times of profile blocks
     static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed profile blocks

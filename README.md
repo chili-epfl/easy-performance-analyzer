@@ -7,7 +7,7 @@ Just the simple cross-platform profiling tool for C++ you've been looking for!
   - Real-time profiling and reporting option
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
-  - Multithreading support (coming soon)
+  - Multithreading support
 
 Linux Build
 -----------
@@ -87,11 +87,11 @@ There are 3 ways to use easy-profiler:
 
     ...
 
-        EZP_START("Example block")
+        EZP_START("XMPL")
 
         ... your code ...
 
-        EZP_END("Example block")
+        EZP_END("XMPL")
 
     ...
     ```
@@ -110,11 +110,11 @@ There are 3 ways to use easy-profiler:
     ...
 
         forever{
-            EZP_START_SMOOTH("Example block")
+            EZP_START_SMOOTH("XMPL")
 
             ... your code ...
 
-            EZP_END_SMOOTH("Example block")
+            EZP_END_SMOOTH("XMPL")
         }
 
     ...
@@ -136,11 +136,11 @@ There are 3 ways to use easy-profiler:
     ...
 
         forever{
-            EZP_START_OFFLINE("Example block")
+            EZP_START_OFFLINE("XPML")
 
             ... your code ...
 
-            EZP_END_OFFLINE("Example block")
+            EZP_END_OFFLINE("XMPL")
         }
 
     ...
@@ -152,6 +152,8 @@ There are 3 ways to use easy-profiler:
 
     Average and total execution times and number of executions of all offline profiles are printed when `EZP_PRINT_OFFLINE` is called.
     `EZP_CLEAR_OFFLINE` can be called at any time to erase the offline profile history.
+
+**Important note**: Block names must be 4 characters maximum: This is for faster instrumentation so that your measurements can be more accurate and the original code is disturbed less.
 
 All three methods can be used simultaneously and can be nested. See the samples for more detailed example usage.
 
@@ -168,6 +170,8 @@ API Summary
   - `EZP_END_OFFLINE(BLOCK_NAME)` - Ends an offline profile
   - `EZP_PRINT_OFFLINE` - Prints average and total times and numbers of execution of all offline profiles
   - `EZP_CLEAR_OFFLINE` - Erases the offline profile history
+
+In all calls, `BLOCK_NAME` is maximum 4 characters long.
 
 Samples
 -------

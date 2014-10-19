@@ -30,25 +30,25 @@
 void* run(void* id){
     int* y = new int;
 
-    EZP_START_OFFLINE("WHOLE_THING")
+    EZP_START_OFFLINE("ALL")
     for(int i=0;i<100;i++){
 
-        EZP_START_OFFLINE("LOOP_1")
+        EZP_START_OFFLINE("LP1")
         for(int j=0;j<10000000;j++){
             *y += 28138481u;
             *y = 623415232 % *y;
         }
-        EZP_END_OFFLINE("LOOP_1")
+        EZP_END_OFFLINE("LP1")
 
-        EZP_START_OFFLINE("LOOP_2")
+        EZP_START_OFFLINE("LP2")
         for(int j=0;j<10000000;j++){
             *y += 51;
             *y = *y % 101;
         }
-        EZP_END_OFFLINE("LOOP_2")
+        EZP_END_OFFLINE("LP2")
 
     }
-    EZP_END_OFFLINE("WHOLE_THING")
+    EZP_END_OFFLINE("ALL")
 
     pthread_exit(NULL);
 }

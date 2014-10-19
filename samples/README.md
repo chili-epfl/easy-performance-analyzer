@@ -4,6 +4,7 @@ easy-profiler samples
 Here are the current samples:
 
   - **real-time**: Demonstrates the basic usage of easy-profiler
+  - **offline**: Demonstrates the basic offline usage of easy-profiler
   - **compiler-optimization**: Demonstrates the effects of compiler optimization on code speed
   - **multithreaded**: Demonstrates the usage with multiple threads running the same profiling blocks
 
