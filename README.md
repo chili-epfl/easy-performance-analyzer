@@ -166,9 +166,11 @@ There are 3 ways to use easy-profiler:
     Average and total execution times and number of executions of all offline profiles are printed when `EZP_PRINT_OFFLINE` is called.
     `EZP_CLEAR_OFFLINE` can be called at any time to erase the offline profile history.
 
-**Important note**: Block names must be 4 characters maximum: This is for faster instrumentation so that your measurements can be more accurate and the original code is disturbed less.
-
 All three methods can be used simultaneously and can be nested. See the samples for more detailed example usage.
+
+**Important note 1**: Block names must be 4 characters maximum: This is for faster instrumentation so that your measurements can be more accurate and the original code is disturbed less.
+
+**Important note 2**: Printing to stdout or Logcat in real time takes significant amount of time (on tested machines, on the order of tens of microseconds); this could disturb yor measurements. For time critical applications, prefer **offline** profiling which will provide the lightest instrumentation.
 
 API Summary
 -----------
