@@ -85,7 +85,6 @@
 
 #include<ctime>
 #include<map>
-#include<string>
 #include<vector>
 #include<algorithm>
 #include<pthread.h>
@@ -315,7 +314,7 @@ public:
      */
     static void clearOfflineProfiles();
 
-    static std::string androidTag;      ///< Logcat tag on Android
+    static const char* androidTag;      ///< Logcat tag on Android
 
 private:
 
@@ -356,7 +355,7 @@ private:
 };
 
 #ifdef ANDROID
-#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyProfiler::androidTag.c_str(), __VA_ARGS__)
+#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyProfiler::androidTag, __VA_ARGS__)
 #else
 #define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
 #endif

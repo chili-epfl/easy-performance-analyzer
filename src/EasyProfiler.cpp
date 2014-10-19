@@ -30,7 +30,7 @@ namespace ezp{
 //Static members
 ///////////////////////////////////////////////////////////////////////////////
 
-std::string EasyProfiler::androidTag = "EASYPROFILER";
+const char* EasyProfiler::androidTag = "EASYPROFILER";
 
 Blk2Clk EasyProfiler::blocks(BlockKey::compare);
 Blk2SMarker EasyProfiler::smoothBlocks(BlockKey::compare);
