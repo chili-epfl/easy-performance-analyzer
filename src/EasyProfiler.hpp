@@ -88,6 +88,9 @@
 #include<string>
 #include<vector>
 #include<algorithm>
+#include<pthread.h>
+#include<sys/syscall.h>
+#include<unistd.h>
 
 #ifdef ANDROID
 #include<android/log.h>
@@ -98,8 +101,49 @@
 namespace ezp{
 
 #define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
+#ifdef ANDROID
+#define EZP_GET_TID gettid()
+#else
+#define EZP_GET_TID syscall(SYS_gettid)
+#endif
+
+typedef pid_t TID;
 
 typedef struct timespec Timespec;
+
+/**
+ * @brief Key to reaching profile records
+ */
+struct BlockKey_t{
+    TID tid;                ///< Thread ID of the block's caller
+    std::string blockName;  ///< Name of the block
+
+    /**
+     * @brief Creates a new profile record key
+     *
+     * @param tid_ Thread ID of the block's caller
+     * @param blockName_ Name of the block
+     */
+    BlockKey_t(TID tid_, const std::string& blockName_){
+        tid = tid_;
+        blockName = blockName_;
+    }
+
+    /**
+     * @brief Compares two BlockKeys for sorting purposes, thread ID has priority
+     *
+     * @param one First compared key
+     * @param two Second compared key
+     *
+     * @return Whether first key is ahead of second key
+     */
+    static bool compare(const struct BlockKey_t& one, const struct BlockKey_t& two){
+        if(one.tid == two.tid)
+            return one.blockName.compare(two.blockName) > 0;
+        else
+            return one.tid > two.tid;
+    }
+};
 
 /**
  * @brief Holds a smooth profile record
@@ -129,9 +173,10 @@ struct AggregateMarker_t{
 };
 
 /**
- * @brief Brings AggregateMarker and block name together in a sortable object
+ * @brief Brings AggregateMarker and BlockKey together in a sortable object
  */
 struct AggregateProfile_t{
+    TID tid;                ///< Thread ID
     std::string blockName;  ///< Name of the profile
     float averageTime;      ///< Average time the profile took in the past
     int numSamples;         ///< How many times this profile was done in the past
@@ -144,21 +189,72 @@ struct AggregateProfile_t{
      *
      * @return Whether first took more average time than the second
      */
-    static bool compare(const struct AggregateProfile_t& one, const struct AggregateProfile_t& two)
+    static bool compareAvgTime(const struct AggregateProfile_t& one, const struct AggregateProfile_t& two)
     {
         return one.averageTime > two.averageTime;
     }
+
+    /**
+     * @brief Compares two AggregateProfiles on their block names for sorting purposes
+     *
+     * @param one First compared profile
+     * @param two Second compared profile
+     *
+     * @return Whether first block name comes before the second
+     */
+    static bool compareBlockName(const struct AggregateProfile_t& one, const struct AggregateProfile_t& two)
+    {
+        return one.blockName.compare(two.blockName) < 0;
+    }
 };
 
+/**
+ * @brief Sum of profiles coming from different threads
+ */
+struct SummedProfile_t{
+    std::string blockName;  ///< Name of the profile
+    float totalTime;        ///< Total time this profile took
+    int numSamples;         ///< Total number of times this profile was done
+
+    /**
+     * @brief Initializes a new summed profile
+     *
+     * @param blockName_ Name of the profile
+     * @param totalTime_ Initial total time coming from a thread
+     * @param numSamples_ Initial number of times this profile was done, coming from a thread
+     */
+    SummedProfile_t(const std::string& blockName_, float totalTime_, int numSamples_){
+        blockName = blockName_;
+        totalTime = totalTime_;
+        numSamples = numSamples_;
+    }
+
+    /**
+     * @brief Compares two SummedProfiles on their average times for sorting purposes
+     *
+     * @param one First compared profile
+     * @param two Second compared profile
+     *
+     * @return Whether first took more average time than the second
+     */
+    static bool compare(const struct SummedProfile_t& one, const struct SummedProfile_t& two)
+    {
+        return one.totalTime/one.numSamples > two.totalTime/two.numSamples;
+    }
+};
+
+typedef struct BlockKey_t BlockKey;
+typedef bool (*BlockKeyComp)(const BlockKey&, const BlockKey&);
 typedef struct SmoothMarker_t SmoothMarker;
 typedef struct AggregateMarker_t AggregateMarker;
 typedef struct AggregateProfile_t AggregateProfile;
-typedef std::map<std::string,Timespec*> Str2Clk;
-typedef std::pair<std::string,Timespec*> StrClkPair;
-typedef std::map<std::string,SmoothMarker*> Str2SMarker;
-typedef std::pair<std::string,SmoothMarker*> Str2SMarkerPair;
-typedef std::map<std::string,AggregateMarker*> Str2AMarker;
-typedef std::pair<std::string,AggregateMarker*> Str2AMarkerPair;
+typedef struct SummedProfile_t SummedProfile;
+typedef std::map<BlockKey, Timespec*, BlockKeyComp> Blk2Clk;
+typedef std::pair<BlockKey, Timespec*> BlkClkPair;
+typedef std::map<BlockKey, SmoothMarker*, BlockKeyComp> Blk2SMarker;
+typedef std::pair<BlockKey, SmoothMarker*> Blk2SMarkerPair;
+typedef std::map<BlockKey, AggregateMarker*, BlockKeyComp> Blk2AMarker;
+typedef std::pair<BlockKey, AggregateMarker*> Blk2AMarkerPair;
 
 /**
  * @brief Simple instrumentation profiler that relies on CPU clocks
@@ -233,9 +329,13 @@ private:
      */
     static float getTimeDiff(const Timespec* begin, const Timespec* end);
 
-    static Str2Clk blocks;              ///< Names and beginning times of profile blocks
-    static Str2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed profile blocks
-    static Str2AMarker offlineBlocks;   ///< Names, beginning times, total times and number of samples of offline profile blocks
+    static Blk2Clk blocks;              ///< Names and beginning times of profile blocks
+    static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed profile blocks
+    static Blk2AMarker offlineBlocks;   ///< Names, beginning times, total times and number of samples of offline profile blocks
+
+    static pthread_mutex_t lock;        ///< Locks normal profile record access
+    static pthread_mutex_t smoothLock;  ///< Locks smooth profile record access
+    static pthread_mutex_t offlineLock; ///< Locks offline profile record access
 };
 
 #ifdef ANDROID
