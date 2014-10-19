@@ -3,7 +3,8 @@ easy-profiler
 
 Just the simple cross-platform profiling tool for C++ you've been looking for!
 
-  - Supports Linux and Android
+  - Linux and Android support
+  - Instrumentation calls take ~1 microsecond on tested machines
   - Real-time profiling and reporting option
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
