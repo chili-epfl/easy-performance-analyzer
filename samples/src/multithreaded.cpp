@@ -22,13 +22,14 @@
  * @date 2014-10-19
  */
 
-#include<ctime>
 #include<pthread.h>
 
 #include<EasyProfiler.hpp>
 
 void* run(void* id){
     int* y = new int;
+
+    EZP_ENABLE
 
     EZP_START_OFFLINE("ALL")
     for(int i=0;i<100;i++){

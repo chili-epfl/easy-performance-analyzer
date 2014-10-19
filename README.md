@@ -8,6 +8,7 @@ Just the simple cross-platform profiling tool for C++ you've been looking for!
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
   - Multithreading support
+  - On-demand enable/disable support
 
 Linux Build
 -----------
@@ -87,6 +88,10 @@ There are 3 ways to use easy-profiler:
 
     ...
 
+        EZP_ENABLE
+
+    ...
+
         EZP_START("XMPL")
 
         ... your code ...
@@ -106,6 +111,10 @@ There are 3 ways to use easy-profiler:
 
     ```
     #include<EasyProfiler.hpp>
+
+    ...
+
+        EZP_ENABLE
 
     ...
 
@@ -135,6 +144,10 @@ There are 3 ways to use easy-profiler:
 
     ...
 
+        EZP_ENABLE
+
+    ...
+
         forever{
             EZP_START_OFFLINE("XPML")
 
@@ -160,6 +173,8 @@ All three methods can be used simultaneously and can be nested. See the samples 
 API Summary
 -----------
 
+  - `EZP_ENABLE` - Enables all profiling
+  - `EZP_DISABLE` - Disables all profiling
   - `EZP_SET_ANDROID_TAG(TAG)` - Sets the Logcat tag of printed messages
   - `EZP_START(BLOCK_NAME)` - Starts a real-time profile
   - `EZP_END(BLOCK_NAME)` - Ends a real-time profile and prints execution time

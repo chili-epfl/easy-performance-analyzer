@@ -27,6 +27,8 @@
 int main(){
     int* y = new int;
 
+    EZP_ENABLE
+
     EZP_START_OFFLINE("ALL")
     for(int i=0;i<100;i++){
 

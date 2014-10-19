@@ -26,6 +26,9 @@
 
 int main(){
     int* y = new int;
+
+    EZP_ENABLE
+
     for(int i=0;i<100;i++){
 
         EZP_START_SMOOTH()

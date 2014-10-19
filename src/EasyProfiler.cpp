@@ -32,6 +32,8 @@ namespace ezp{
 
 const char* EasyProfiler::androidTag = "EASYPROFILER";
 
+bool EasyProfiler::enabled = false;
+
 Blk2Clk EasyProfiler::blocks(BlockKey::compare);
 Blk2SMarker EasyProfiler::smoothBlocks(BlockKey::compare);
 Blk2AMarker EasyProfiler::offlineBlocks(BlockKey::compare);
@@ -47,6 +49,9 @@ pthread_mutex_t EasyProfiler::offlineLock = PTHREAD_MUTEX_INITIALIZER;
 //This function is time critical!
 void EasyProfiler::startProfiling(const char* blockName)
 {
+    if(!enabled)
+        return;
+
     //Get time in the very end to disturb the measurements the least possible
     Timespec* begin = new Timespec();
 
@@ -78,6 +83,9 @@ void EasyProfiler::endProfiling(const char* blockName)
     Timespec end;
     clock_gettime(EZP_CLOCK, &end);
 
+    if(!enabled)
+        return;
+
     TID tid = EZP_GET_TID;
     BlockKey key(tid, hashStr(blockName));
 
@@ -99,6 +107,9 @@ void EasyProfiler::endProfiling(const char* blockName)
 //This function is time critical!
 void EasyProfiler::startProfilingSmooth(const char* blockName)
 {
+    if(!enabled)
+        return;
+
     //Get time in the very end to disturb the measurements the least possible
     SmoothMarker* begin = new SmoothMarker();
 
@@ -130,6 +141,9 @@ void EasyProfiler::endProfilingSmooth(const char* blockName, float sf)
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
 
+    if(!enabled)
+        return;
+
     TID tid = EZP_GET_TID;
     BlockKey key(tid, hashStr(blockName));
 
@@ -152,6 +166,9 @@ void EasyProfiler::endProfilingSmooth(const char* blockName, float sf)
 //This function is time critical!
 void EasyProfiler::startProfilingOffline(const char* blockName)
 {
+    if(!enabled)
+        return;
+
     //Get time in the very end to disturb the measurements the least possible
     AggregateMarker* begin = new AggregateMarker();
 
@@ -183,6 +200,9 @@ void EasyProfiler::endProfilingOffline(const char* blockName)
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
 
+    if(!enabled)
+        return;
+
     BlockKey key(EZP_GET_TID, hashStr(blockName));
 
     pthread_mutex_lock(&offlineLock);
@@ -202,6 +222,9 @@ void EasyProfiler::endProfilingOffline(const char* blockName)
 //This function is not time critical
 void EasyProfiler::printOfflineProfiles()
 {
+    if(!enabled)
+        return;
+
     pthread_mutex_lock(&offlineLock);
     if(offlineBlocks.size() == 0){
         EZP_OMNIPRINT("EZP ERROR: No offline profile found; profile some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
@@ -272,6 +295,9 @@ void EasyProfiler::printOfflineProfiles()
 //This function is not time critical
 void EasyProfiler::clearOfflineProfiles()
 {
+    if(!enabled)
+        return;
+
     pthread_mutex_lock(&offlineLock);
     //TODO: MEMORY LEAK: DELETE KEYS AND VALUES BEFORE CLEARING!!!!!!!!!!!!
     offlineBlocks.clear();

@@ -35,6 +35,16 @@
 #define EZP_SET_ANDROID_TAG(TAG) ezp::EasyProfiler::androidTag = TAG;
 
 /**
+ * @brief Turns profiling on
+ */
+#define EZP_ENABLE ezp::EasyProfiler::enabled = true;
+
+/**
+ * @brief Turns profiling off completely
+ */
+#define EZP_DISABLE ezp::EasyProfiler::enabled = false;
+
+/**
  * @brief Alias for EasyProfiler::startProfiling()
  */
 #define EZP_START(BLOCK_NAME) ezp::EasyProfiler::startProfiling(BLOCK_NAME);
@@ -315,6 +325,7 @@ public:
     static void clearOfflineProfiles();
 
     static const char* androidTag;      ///< Logcat tag on Android
+    static bool enabled;                ///< Whether profiling is enabled
 
 private:
 
