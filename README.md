@@ -3,9 +3,10 @@ easy-performance-analyzer
 
 A simple cross-platform instrumented performance analysis tool:
 
+  - Measures execution time of instrumented code blocks
   - Linux and Android support
   - Instrumentation calls take ~1 microsecond on tested machines
-  - Real-time analysis and reporting option
+  - Real-time reporting option
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
   - Multithreading support
