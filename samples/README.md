@@ -7,6 +7,7 @@ Here are the current samples:
   - **offline**: Demonstrates the basic offline usage of easy-performance-analyzer
   - **compiler-optimization**: Demonstrates the effects of compiler optimization on code speed
   - **multithreaded**: Demonstrates the usage with multiple threads running the same analysis blocks
+  - **instrumentation-performance**: Demonstrates the performance of EZP instrumentation calls themselves
 
 Linux Build
 -----------
