@@ -17,14 +17,14 @@
 
 /**
  * @file multithreaded.cpp
- * @brief easy-profiler demo that shows multithreading support
+ * @brief easy-performance-analyzer demo that shows multithreading support
  * @author Ayberk Özgür
  * @date 2014-10-19
  */
 
 #include<pthread.h>
 
-#include<EasyProfiler.hpp>
+#include<ezp.hpp>
 
 void* run(void* id){
     int* y = new int;

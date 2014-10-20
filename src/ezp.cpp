@@ -16,13 +16,13 @@
  */
 
 /**
- * @file easy-profiler.cpp
- * @brief Simple instrumentation profiler
+ * @file ezp.cpp
+ * @brief Simple performance analyzer
  * @author Ayberk Özgür
  * @date 2014-10-15
  */
 
-#include"EasyProfiler.hpp"
+#include"ezp.hpp"
 
 namespace ezp{
 
@@ -30,24 +30,24 @@ namespace ezp{
 //Static members
 ///////////////////////////////////////////////////////////////////////////////
 
-const char* EasyProfiler::androidTag = "EASYPROFILER";
+const char* EasyPerformanceAnalyzer::androidTag = "EZP";
 
-bool EasyProfiler::enabled = false;
+bool EasyPerformanceAnalyzer::enabled = false;
 
-Blk2Clk EasyProfiler::blocks(BlockKey::compare);
-Blk2SMarker EasyProfiler::smoothBlocks(BlockKey::compare);
-Blk2AMarker EasyProfiler::offlineBlocks(BlockKey::compare);
+Blk2Clk EasyPerformanceAnalyzer::blocks(BlockKey::compare);
+Blk2SMarker EasyPerformanceAnalyzer::smoothBlocks(BlockKey::compare);
+Blk2AMarker EasyPerformanceAnalyzer::offlineBlocks(BlockKey::compare);
 
-pthread_mutex_t EasyProfiler::lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t EasyProfiler::smoothLock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t EasyProfiler::offlineLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t EasyPerformanceAnalyzer::lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t EasyPerformanceAnalyzer::smoothLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER;
 
 ///////////////////////////////////////////////////////////////////////////////
 //Functions
 ///////////////////////////////////////////////////////////////////////////////
 
 //This function is time critical!
-void EasyProfiler::startProfiling(const char* blockName)
+void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
 {
     if(!enabled)
         return;
@@ -78,7 +78,7 @@ void EasyProfiler::startProfiling(const char* blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfiling(const char* blockName)
+void EasyPerformanceAnalyzer::endProfiling(const char* blockName)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK, &end);
@@ -105,7 +105,7 @@ void EasyProfiler::endProfiling(const char* blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::startProfilingSmooth(const char* blockName)
+void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
 {
     if(!enabled)
         return;
@@ -136,7 +136,7 @@ void EasyProfiler::startProfilingSmooth(const char* blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfilingSmooth(const char* blockName, float sf)
+void EasyPerformanceAnalyzer::endProfilingSmooth(const char* blockName, float sf)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
@@ -164,7 +164,7 @@ void EasyProfiler::endProfilingSmooth(const char* blockName, float sf)
 }
 
 //This function is time critical!
-void EasyProfiler::startProfilingOffline(const char* blockName)
+void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
 {
     if(!enabled)
         return;
@@ -195,7 +195,7 @@ void EasyProfiler::startProfilingOffline(const char* blockName)
 }
 
 //This function is time critical!
-void EasyProfiler::endProfilingOffline(const char* blockName)
+void EasyPerformanceAnalyzer::endProfilingOffline(const char* blockName)
 {
     Timespec end;
     clock_gettime(EZP_CLOCK,&end);
@@ -220,14 +220,14 @@ void EasyProfiler::endProfilingOffline(const char* blockName)
 }
 
 //This function is not time critical
-void EasyProfiler::printOfflineProfiles()
+void EasyPerformanceAnalyzer::printOfflineProfiles()
 {
     if(!enabled)
         return;
 
     pthread_mutex_lock(&offlineLock);
     if(offlineBlocks.size() == 0){
-        EZP_OMNIPRINT("EZP ERROR: No offline profile found; profile some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
+        EZP_OMNIPRINT("EZP ERROR: No offline block found; instrument some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
         return;
     }
 
@@ -248,7 +248,7 @@ void EasyProfiler::printOfflineProfiles()
 
     //Do the thread-wise printing
     EZP_OMNIPRINT("=======================================================================\n");
-    EZP_OMNIPRINT("Thread-wise profile results\n");
+    EZP_OMNIPRINT("Thread-wise analysis results\n");
     EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
     EZP_OMNIPRINT("Thread ID    Name    Average(ms)         Total(ms)           Calls     \n");
     EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
@@ -280,7 +280,7 @@ void EasyProfiler::printOfflineProfiles()
 
     //Print summed profiles
     EZP_OMNIPRINT("=======================================================================\n");
-    EZP_OMNIPRINT("Summed results across threads\n");
+    EZP_OMNIPRINT("Anaylsis results summed across threads\n");
     EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
     EZP_OMNIPRINT("Name    Average(ms)         Total(ms)           Calls                  \n");
     EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
@@ -293,7 +293,7 @@ void EasyProfiler::printOfflineProfiles()
 }
 
 //This function is not time critical
-void EasyProfiler::clearOfflineProfiles()
+void EasyPerformanceAnalyzer::clearOfflineProfiles()
 {
     if(!enabled)
         return;
@@ -305,13 +305,13 @@ void EasyProfiler::clearOfflineProfiles()
 }
 
 //This function is time critical!
-inline float EasyProfiler::getTimeDiff(const Timespec* begin, const Timespec* end)
+inline float EasyPerformanceAnalyzer::getTimeDiff(const Timespec* begin, const Timespec* end)
 {
     return (float)(end->tv_sec - begin->tv_sec)*1000.0f + (float)(end->tv_nsec - begin->tv_nsec)/1000000.0f;
 }
 
 //This function is time critical!
-inline unsigned int EasyProfiler::hashStr(const char* str)
+inline unsigned int EasyPerformanceAnalyzer::hashStr(const char* str)
 {
     unsigned int result = 0;
 
@@ -337,7 +337,7 @@ inline unsigned int EasyProfiler::hashStr(const char* str)
 }
 
 //This function is time critical!
-inline void EasyProfiler::unhashStr(unsigned int hash, char* output)
+inline void EasyPerformanceAnalyzer::unhashStr(unsigned int hash, char* output)
 {
     output[4] = '\0';
 

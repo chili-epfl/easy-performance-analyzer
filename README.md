@@ -1,11 +1,11 @@
-easy-profiler
-=============
+easy-performance-analyzer
+=========================
 
-Just the simple cross-platform profiling tool for C++ you've been looking for!
+A simple cross-platform instrumented performance analysis tool:
 
   - Linux and Android support
   - Instrumentation calls take ~1 microsecond on tested machines
-  - Real-time profiling and reporting option
+  - Real-time analysis and reporting option
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
   - Multithreading support
@@ -57,7 +57,7 @@ These instructions assume `armv7-a` target architecture. For other architectures
 
   Make sure that the `ANDROID_NDK` environment variable is **not set** before proceeding.
 
-3. In the `easy-profiler` source directory:
+3. In the `easy-performance-analyzer` source directory:
 
   ```
   mkdir build-android
@@ -67,10 +67,10 @@ These instructions assume `armv7-a` target architecture. For other architectures
   make install
   ```
 
-Now `easy-profiler` is installed in your standalone toolchain under `/path-to-android-standalone-toolchain/sysroot/usr/` just like a regular library. To build an example user program, execute:
+Now `easy-performance-analyzer` is installed in your standalone toolchain under `/path-to-android-standalone-toolchain/sysroot/usr/` just like a regular library. To build an example user program, execute:
 
 ```
-/path-to-android-standalone-toolchain/bin/arm-linux-androideabi-g++ input.cpp -o example-program -leasyprofiler -llog
+/path-to-android-standalone-toolchain/bin/arm-linux-androideabi-g++ input.cpp -o example-program -lezp -llog
 ```
 
 Please note that you have to link `log` yourself when compiling if it's not automatically being linked by your build system. See the samples for more details.
@@ -78,14 +78,14 @@ Please note that you have to link `log` yourself when compiling if it's not auto
 How to use
 ----------
 
-There are 3 ways to use easy-profiler:
+There are 3 ways to use easy-performance-analyzer:
 
-  1. **Real-time profiling**
+  1. **Real-time analysis**
 
     Execution time of a block of code is measured and printed in real time. Example usage:
 
     ```
-    #include<EasyProfiler.hpp>
+    #include<ezp.hpp>
 
     ...
 
@@ -104,14 +104,14 @@ There are 3 ways to use easy-profiler:
 
     The time it took to run the block between the macros is measured and printed as soon as `EZP_END()` is called.
 
-  2. **Smoothed real-time profiling**
+  2. **Smoothed real-time analysis**
 
     Execution time of a block of code is measured and printed in real time, and is smoothed in time with an IIR low pass filter
     using past measurements. Of course, this is only useful for scenarios where the block is called periodically where you want to see the average
     time it takes to run. Example usage:
 
     ```
-    #include<EasyProfiler.hpp>
+    #include<ezp.hpp>
 
     ...
 
@@ -136,12 +136,12 @@ There are 3 ways to use easy-profiler:
     own smoothing coefficient. This coefficient is multiplied with the history and should be between 0 and 1. Closer to 0 means no
     smoothing and closer to 1 means no update at all.
 
-  3. **Offline aggregate profiling**
+  3. **Offline aggregate analysis**
 
     Execution time of a block is measured and kept for later use. Example usage:
 
     ```
-    #include<EasyProfiler.hpp>
+    #include<ezp.hpp>
 
     ...
 
@@ -164,30 +164,30 @@ There are 3 ways to use easy-profiler:
     ...
     ```
 
-    Average and total execution times and number of executions of all offline profiles are printed when `EZP_PRINT_OFFLINE` is called.
-    `EZP_CLEAR_OFFLINE` can be called at any time to erase the offline profile history.
+    Average and total execution times and number of executions of all offline instrumented blocks are printed when `EZP_PRINT_OFFLINE` is called.
+    `EZP_CLEAR_OFFLINE` can be called at any time to erase the offline analysis history.
 
 All three methods can be used simultaneously and can be nested. See the samples for more detailed example usage.
 
 **Important note 1**: Block names must be 4 characters maximum: This is for faster instrumentation so that your measurements can be more accurate and the original code is disturbed less.
 
-**Important note 2**: Printing to stdout or Logcat in real time takes significant amount of time (on tested machines, on the order of tens of microseconds); this could disturb yor measurements. For time critical applications, prefer **offline** profiling which will provide the lightest instrumentation.
+**Important note 2**: Printing to stdout or Logcat in real time takes significant amount of time (on tested machines, on the order of tens of microseconds); this could disturb yor measurements. For time critical applications, prefer **offline** analysis which will provide the lightest instrumentation.
 
 API Summary
 -----------
 
-  - `EZP_ENABLE` - Enables all profiling
-  - `EZP_DISABLE` - Disables all profiling
+  - `EZP_ENABLE` - Enables all analysis
+  - `EZP_DISABLE` - Disables all analysis
   - `EZP_SET_ANDROID_TAG(TAG)` - Sets the Logcat tag of printed messages
-  - `EZP_START(BLOCK_NAME)` - Starts a real-time profile
-  - `EZP_END(BLOCK_NAME)` - Ends a real-time profile and prints execution time
-  - `EZP_START_SMOOTH(BLOCK_NAME)`- Starts a smoothed real-time profile
-  - `EZP_END_SMOOTH(BLOCK_NAME)` - Ends a smoothed real-time profile and prints smoothed execution time using the history of measurements
-  - `EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR)` - Ends a smoothed real-time profile and prints the smoothed execution time with custom smoothing factor
-  - `EZP_START_OFFLINE(BLOCK_NAME)` - Starts an offline profile
-  - `EZP_END_OFFLINE(BLOCK_NAME)` - Ends an offline profile
-  - `EZP_PRINT_OFFLINE` - Prints average and total times and numbers of execution of all offline profiles
-  - `EZP_CLEAR_OFFLINE` - Erases the offline profile history
+  - `EZP_START(BLOCK_NAME)` - Begins a real-time analysis block
+  - `EZP_END(BLOCK_NAME)` - Ends a real-time analysis block and prints execution time
+  - `EZP_START_SMOOTH(BLOCK_NAME)`- Starts a smoothed real-time analysis block
+  - `EZP_END_SMOOTH(BLOCK_NAME)` - Ends a smoothed real-time analysis block and prints smoothed execution time using the history of measurements
+  - `EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR)` - Ends a smoothed real-time analysis block and prints the smoothed execution time with custom smoothing factor
+  - `EZP_START_OFFLINE(BLOCK_NAME)` - Starts an offline analysis block
+  - `EZP_END_OFFLINE(BLOCK_NAME)` - Ends an offline analysis block
+  - `EZP_PRINT_OFFLINE` - Prints average and total times and numbers of execution of all offline analysis blocks
+  - `EZP_CLEAR_OFFLINE` - Erases the offline analysis history
 
 In all calls, `BLOCK_NAME` is maximum 4 characters long.
 

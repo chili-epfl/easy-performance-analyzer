@@ -16,14 +16,14 @@
  */
 
 /**
- * @file easy-profiler.hpp
- * @brief Simple instrumentation profiler
+ * @file ezp.hpp
+ * @brief Simple performance analyzer
  * @author Ayberk Özgür
  * @date 2014-10-15
  */
 
-#ifndef EASYPROFILER_HPP
-#define EASYPROFILER_HPP
+#ifndef EZP_HPP
+#define EZP_HPP
 
 ///////////////////////////////////////////////////////////////////////////////
 //Public API
@@ -32,62 +32,62 @@
 /**
  * @brief Sets the Logcat tag on Android
  */
-#define EZP_SET_ANDROID_TAG(TAG) ezp::EasyProfiler::androidTag = TAG;
+#define EZP_SET_ANDROID_TAG(TAG) ezp::EasyPerformanceAnalyzer::androidTag = TAG;
 
 /**
- * @brief Turns profiling on
+ * @brief Turns analysis on
  */
-#define EZP_ENABLE ezp::EasyProfiler::enabled = true;
+#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::enabled = true;
 
 /**
- * @brief Turns profiling off completely
+ * @brief Turns analysis off completely
  */
-#define EZP_DISABLE ezp::EasyProfiler::enabled = false;
+#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false;
 
 /**
- * @brief Alias for EasyProfiler::startProfiling()
+ * @brief Begins a real-time analysis block
  */
-#define EZP_START(BLOCK_NAME) ezp::EasyProfiler::startProfiling(BLOCK_NAME);
+#define EZP_START(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::startProfiling(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::endProfiling()
+ * @brief Ends a real-time analysis block and prints execution time
  */
-#define EZP_END(BLOCK_NAME) ezp::EasyProfiler::endProfiling(BLOCK_NAME);
+#define EZP_END(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::endProfiling(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::startProfilingSmooth()
+ * @brief Starts a smoothed real-time analysis block
  */
-#define EZP_START_SMOOTH(BLOCK_NAME) ezp::EasyProfiler::startProfilingSmooth(BLOCK_NAME);
+#define EZP_START_SMOOTH(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::startProfilingSmooth(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::endProfilingSmooth() with default smoothing factor
+ * @brief Ends a smoothed real-time analysis block and prints smoothed execution time using the history of measurements
  */
-#define EZP_END_SMOOTH(BLOCK_NAME) ezp::EasyProfiler::endProfilingSmooth(BLOCK_NAME);
+#define EZP_END_SMOOTH(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::endProfilingSmooth(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::endProfilingSmooth() with custom smoothing factor
+ * @brief Ends a smoothed real-time analysis block and prints the smoothed execution time with custom smoothing factor
  */
-#define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) ezp::EasyProfiler::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
+#define EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR) ezp::EasyPerformanceAnalyzer::endProfilingSmooth(BLOCK_NAME,SMOOTHING_FACTOR);
 
 /**
- * @brief Alias for EasyProfiler::startProfilingOffline()
+ * @brief Starts an offline analysis block
  */
-#define EZP_START_OFFLINE(BLOCK_NAME) ezp::EasyProfiler::startProfilingOffline(BLOCK_NAME);
+#define EZP_START_OFFLINE(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::startProfilingOffline(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::endProfilingOffline()
+ * @brief Ends an offline analysis block
  */
-#define EZP_END_OFFLINE(BLOCK_NAME) ezp::EasyProfiler::endProfilingOffline(BLOCK_NAME);
+#define EZP_END_OFFLINE(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::endProfilingOffline(BLOCK_NAME);
 
 /**
- * @brief Alias for EasyProfiler::printOfflineProfiles()
+ * @brief Prints average and total times and numbers of execution of all offline analysis blocks
  */
-#define EZP_PRINT_OFFLINE ezp::EasyProfiler::printOfflineProfiles();
+#define EZP_PRINT_OFFLINE ezp::EasyPerformanceAnalyzer::printOfflineProfiles();
 
 /**
- * @brief Alias for EasyProfiler::clearOfflineProfiles()
+ * @brief Erases the offline analysis history
  */
-#define EZP_CLEAR_OFFLINE ezp::EasyProfiler::clearOfflineProfiles();
+#define EZP_CLEAR_OFFLINE ezp::EasyPerformanceAnalyzer::clearOfflineProfiles();
 
 ///////////////////////////////////////////////////////////////////////////////
 //Private API
@@ -121,14 +121,14 @@ typedef pid_t TID;
 typedef struct timespec Timespec;
 
 /**
- * @brief Key to reaching profile records
+ * @brief Key to reaching analysis records
  */
 struct BlockKey_t{
     TID tid;                ///< Thread ID of the block's caller
     unsigned int blockName; ///< Hash of name of the block
 
     /**
-     * @brief Creates a new profile record key
+     * @brief Creates a new analysis record key
      *
      * @param tid_ Thread ID of the block's caller
      * @param blockName_ Hash of the name of the block
@@ -155,28 +155,28 @@ struct BlockKey_t{
 };
 
 /**
- * @brief Holds a smooth profile record
+ * @brief Holds a smooth analysis record
  */
 struct SmoothMarker_t{
-    Timespec beginTime; ///< When the most recent profile was started
-    float lastSlice;    ///< Most recent smoothed time that this profile took, i.e history
+    Timespec beginTime; ///< When the most recent block was started
+    float lastSlice;    ///< Most recent smoothed time that this analysis took, i.e history
 
     /**
-     * @brief Creates a new smooth profile record with zero history
+     * @brief Creates a new smooth analysis record with zero history
      */
     SmoothMarker_t(){ lastSlice = 0.0f; }
 };
 
 /**
- * @brief Holds the total amount of time a profile took in the past
+ * @brief Holds the total amount of time a block took in the past
  */
 struct AggregateMarker_t{
-    Timespec beginTime; ///< When the most recent profile was started
-    float totalTime;    ///< Total time that this profile took in the past
-    int numSamples;     ///< How many times this profile was done in the past
+    Timespec beginTime; ///< When the most recent block was started
+    float totalTime;    ///< Total time that this block took in the past
+    int numSamples;     ///< How many times this block was ran in the past
 
     /**
-     * @brief Creates a new aggregate profile with zero history
+     * @brief Creates a new aggregate analysis with zero history
      */
     AggregateMarker_t(){ totalTime = 0.0f; numSamples = 0; }
 };
@@ -186,9 +186,9 @@ struct AggregateMarker_t{
  */
 struct AggregateProfile_t{
     TID tid;                ///< Thread ID
-    unsigned int blockName; ///< Hash of the name of the profile
-    float averageTime;      ///< Average time the profile took in the past
-    int numSamples;         ///< How many times this profile was done in the past
+    unsigned int blockName; ///< Hash of the name of the block
+    float averageTime;      ///< Average time the block took in the past
+    int numSamples;         ///< How many times this block was ran in the past
 
     /**
      * @brief Compares two AggregateProfiles on their average times for sorting purposes
@@ -228,7 +228,7 @@ struct SummedProfile_t{
     /**
      * @brief Initializes a new summed profile
      *
-     * @param blockName_ Hash of the name of the profile
+     * @param blockName_ Hash of the name of the block
      * @param totalTime_ Initial total time coming from a thread
      * @param numSamples_ Initial number of times this profile was done, coming from a thread
      */
@@ -266,66 +266,66 @@ typedef std::map<BlockKey, AggregateMarker*, BlockKeyComp> Blk2AMarker;
 typedef std::pair<BlockKey, AggregateMarker*> Blk2AMarkerPair;
 
 /**
- * @brief Simple instrumentation profiler that relies on CPU clocks
+ * @brief Simple instrumented performance analyzer that relies on CPU clocks
  */
-class EasyProfiler{
+class EasyPerformanceAnalyzer{
 public:
 
     /**
-     * @brief Starts a named profile
+     * @brief Starts a named analysis
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed block, max 4 characters
      */
     static void startProfiling(const char* blockName = "NDEF");
 
     /**
-     * @brief Ends the named profile, printing the running time of the block; it must have been started before
+     * @brief Ends the named analysis, printing the running time of the block; it must have been started before
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed block, max 4 characters
      */
     static void endProfiling(const char* blockName = "NDEF");
 
     /**
-     * @brief Starts a named profile that is smoothed over time
+     * @brief Starts a named analysis that is smoothed over time
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed block, max 4 characters
      */
     static void startProfilingSmooth(const char* blockName = "NDEF");
 
     /**
-     * @brief  Ends a named smoothed profile, printing the running time of the block; it must have been started before
+     * @brief  Ends a named smoothed analysis, printing the running time of the block; it must have been started before
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed block, max 4 characters
      * @param smoothingFactor Coefficient of the history, between 0 and 1
      */
     static void endProfilingSmooth(const char* blockName = "NDEF", float smoothingFactor = 0.95f);
 
     /**
-     * @brief Starts a named offline profile that keeps the total running time and number of calls
+     * @brief Starts a named offline analysis that keeps the total running time and number of calls
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed block, max 4 characters
      */
     static void startProfilingOffline(const char* blockName = "NDEF");
 
     /**
-     * @brief Ends a named offline profile, it must have been smoothed before
+     * @brief Ends a named offline analysis, it must have been smoothed before
      *
-     * @param blockName Name of the profile, max 4 characters
+     * @param blockName Name of the analyzed profile, max 4 characters
      */
     static void endProfilingOffline(const char* blockName = "NDEF");
 
     /**
-     * @brief Prints all data of all offline profiles up to now
+     * @brief Prints all data of all offline analyses up to now
      */
     static void printOfflineProfiles();
 
     /**
-     * @brief Clears the offline profile record
+     * @brief Clears the offline analysis record
      */
     static void clearOfflineProfiles();
 
     static const char* androidTag;      ///< Logcat tag on Android
-    static bool enabled;                ///< Whether profiling is enabled
+    static bool enabled;                ///< Whether analysis is enabled
 
 private:
 
@@ -356,22 +356,22 @@ private:
      */
     static void unhashStr(unsigned int hash, char* output);
 
-    static Blk2Clk blocks;              ///< Names and beginning times of profile blocks
-    static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed profile blocks
-    static Blk2AMarker offlineBlocks;   ///< Names, beginning times, total times and number of samples of offline profile blocks
+    static Blk2Clk blocks;              ///< Names and beginning times of analysis blocks
+    static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed analysis blocks
+    static Blk2AMarker offlineBlocks;   ///< Names, beginning times, total times and number of samples of offline analysis blocks
 
-    static pthread_mutex_t lock;        ///< Locks normal profile record access
-    static pthread_mutex_t smoothLock;  ///< Locks smooth profile record access
-    static pthread_mutex_t offlineLock; ///< Locks offline profile record access
+    static pthread_mutex_t lock;        ///< Locks normal analysis record access
+    static pthread_mutex_t smoothLock;  ///< Locks smooth analysis record access
+    static pthread_mutex_t offlineLock; ///< Locks offline analysis record access
 };
 
 #ifdef ANDROID
-#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyProfiler::androidTag, __VA_ARGS__)
+#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
 #else
 #define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
 #endif
 
 } /* namespace ezp */
 
-#endif /* EASYPROFILER_HPP */
+#endif /* EZP_HPP */
 

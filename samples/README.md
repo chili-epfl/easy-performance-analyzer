@@ -1,12 +1,12 @@
-easy-profiler samples
-=====================
+easy-performance-analyzer samples
+=================================
 
 Here are the current samples:
 
-  - **real-time**: Demonstrates the basic usage of easy-profiler
-  - **offline**: Demonstrates the basic offline usage of easy-profiler
+  - **real-time**: Demonstrates the basic usage of easy-performance-analyzer
+  - **offline**: Demonstrates the basic offline usage of easy-performance-analyzer
   - **compiler-optimization**: Demonstrates the effects of compiler optimization on code speed
-  - **multithreaded**: Demonstrates the usage with multiple threads running the same profiling blocks
+  - **multithreaded**: Demonstrates the usage with multiple threads running the same analysis blocks
 
 Linux Build
 -----------
@@ -31,5 +31,5 @@ su
 /sdcard/real-time
 ```
 
-The output will be printed to logcat in the DDMS instance under the tag `EASYPROFILER`.
+The output will be printed to logcat in the DDMS instance under the tag `EZP`.
 

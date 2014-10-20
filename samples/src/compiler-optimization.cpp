@@ -17,12 +17,12 @@
 
 /**
  * @file compiler-optimization.cpp
- * @brief easy-profiler demo that shows effect of compiler optimizations on code speed
+ * @brief easy-performance-analyzer demo that shows effect of compiler optimizations on code speed
  * @author Ayberk Özgür
  * @date 2014-10-17
  */
 
-#include<EasyProfiler.hpp>
+#include<ezp.hpp>
 
 int main(){
     int* y = new int;

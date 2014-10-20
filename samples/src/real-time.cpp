@@ -17,12 +17,12 @@
 
 /**
  * @file real-time.cpp
- * @brief easy-profiler demo that shows basic real-time usage
+ * @brief easy-performance-analyzer demo that shows basic real-time usage
  * @author Ayberk Özgür
  * @date 2014-10-17
  */
 
-#include<EasyProfiler.hpp>
+#include<ezp.hpp>
 
 int main(){
     int* y = new int;

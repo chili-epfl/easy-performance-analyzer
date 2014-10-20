@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(easy-profiler)
+project(easy-performance-analyzer)
 
 #Options
 option(WITH_SAMPLES "Build samples" ON)
@@ -11,13 +11,13 @@ message(STATUS "    WITH_SAMPLES:   " ${WITH_SAMPLES})
 message(STATUS "")
 
 #Main lib
-add_library(easyprofiler STATIC src/EasyProfiler.cpp)
-set_target_properties(easyprofiler PROPERTIES COMPILE_FLAGS "-O3")
+add_library(ezp STATIC src/ezp.cpp)
+set_target_properties(ezp PROPERTIES COMPILE_FLAGS "-O3")
 if(DEFINED ANDROID)
-    target_link_libraries(easyprofiler log)
+    target_link_libraries(ezp log)
 endif()
-install(TARGETS easyprofiler ARCHIVE DESTINATION lib)
-install(FILES src/EasyProfiler.hpp DESTINATION include)
+install(TARGETS ezp ARCHIVE DESTINATION lib)
+install(FILES src/ezp.hpp DESTINATION include)
 
 #Samples
 if(WITH_SAMPLES)
