@@ -31,13 +31,18 @@ namespace ezp{
 ///////////////////////////////////////////////////////////////////////////////
 
 const char* EasyPerformanceAnalyzer::androidTag = "EZP";
+const char* EasyPerformanceAnalyzer::cmdSocketName = "\0ezp_socket";
 
+pthread_t EasyPerformanceAnalyzer::cmdListener;
+
+bool EasyPerformanceAnalyzer::listenerRunning = false;
 bool EasyPerformanceAnalyzer::enabled = false;
 
 Blk2Clk EasyPerformanceAnalyzer::blocks(BlockKey::compare);
 Blk2SMarker EasyPerformanceAnalyzer::smoothBlocks(BlockKey::compare);
 Blk2AMarker EasyPerformanceAnalyzer::offlineBlocks(BlockKey::compare);
 
+pthread_mutex_t EasyPerformanceAnalyzer::listenerLauncherLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::smoothLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER;
@@ -46,15 +51,43 @@ pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER
 //Functions
 ///////////////////////////////////////////////////////////////////////////////
 
+//This function is not time critical
+void EasyPerformanceAnalyzer::cmdExternal(bool enabled)
+{
+    struct sockaddr_un addr;
+    int fd;
+
+    if((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        //perror("socket error");
+        exit(-1);
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, cmdSocketName, sizeof(addr.sun_path) - 1);
+
+    if(connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1){
+        //perror("connect error");
+        exit(-1);
+    }
+
+    if(enabled)
+        write(fd,"e",2);
+    else
+        write(fd,"d",2);
+
+    close(fd);
+}
+
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     Timespec* begin = new Timespec();
-
     BlkClkPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
 
     pthread_mutex_lock(&lock);
@@ -64,6 +97,7 @@ void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&lock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,begin);
     }
 
@@ -73,6 +107,7 @@ void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
         Timespec* target = result.first->second;
         pthread_mutex_unlock(&lock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,target);
     }
 }
@@ -107,10 +142,11 @@ void EasyPerformanceAnalyzer::endProfiling(const char* blockName)
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     SmoothMarker* begin = new SmoothMarker();
 
     Blk2SMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
@@ -122,6 +158,7 @@ void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&smoothLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(begin->beginTime));
     }
 
@@ -131,6 +168,7 @@ void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
         SmoothMarker* target = result.first->second;
         pthread_mutex_unlock(&smoothLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(target->beginTime));
     }
 }
@@ -166,10 +204,11 @@ void EasyPerformanceAnalyzer::endProfilingSmooth(const char* blockName, float sf
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     AggregateMarker* begin = new AggregateMarker();
 
     Blk2AMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
@@ -181,6 +220,7 @@ void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&offlineLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(begin->beginTime));
     }
 
@@ -190,6 +230,7 @@ void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
         AggregateMarker* target = result.first->second;
         pthread_mutex_unlock(&offlineLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(target->beginTime));
     }
 }
@@ -332,7 +373,7 @@ inline unsigned int EasyPerformanceAnalyzer::hashStr(const char* str)
 
     result += str[3];
     if(str[4] != '\0')
-        EZP_OMNIPRINT("EZP ERROR: Block name %s is too long, truncating to 4 characters; consider shortening the name for better performance\n", str);
+        EZP_OMNIPRINT("EZP ERROR: Block name %s is too long, truncating to 4 characters\n", str);
     return result;
 }
 
@@ -353,5 +394,80 @@ inline void EasyPerformanceAnalyzer::unhashStr(unsigned int hash, char* output)
     output[0] = hash;
 }
 
-} /* namespace ezp */
+//This function is (mostly) not time critical
+inline void EasyPerformanceAnalyzer::launchCmdListener()
+{
+    pthread_mutex_lock(&listenerLauncherLock);
+
+    if(listenerRunning){ //Extra guard agains other threads entering this function at the same time
+        pthread_mutex_unlock(&listenerLauncherLock);
+        return;
+    }
+
+    struct sockaddr_un acceptorAddr;
+    int acceptorFD;
+
+    if((acceptorFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        //perror("socket error");
+        exit(-1);
+    }
+
+    memset(&acceptorAddr, 0, sizeof(acceptorAddr));
+    acceptorAddr.sun_family = AF_UNIX;
+    strncpy(acceptorAddr.sun_path, cmdSocketName, sizeof(acceptorAddr.sun_path) - 1);
+
+    unlink(cmdSocketName);
+    if(bind(acceptorFD, (struct sockaddr*)&acceptorAddr, sizeof(acceptorAddr)) == -1){
+        //perror("bind error");
+        exit(-1);
+    }
+    if(listen(acceptorFD, 5) == -1){
+        //perror("listen error");
+        exit(-1);
+    }
+
+    pthread_attr_t* listenerAttr = new pthread_attr_t();
+    pthread_attr_init(listenerAttr);
+    pthread_attr_setdetachstate(listenerAttr, PTHREAD_CREATE_DETACHED);
+    pthread_attr_setguardsize(listenerAttr, 0);
+    pthread_attr_setstacksize(listenerAttr, PTHREAD_STACK_MIN); //This should be plenty
+    if(!pthread_create(&cmdListener, listenerAttr, &EasyPerformanceAnalyzer::listenCmd, (void*)(new int(acceptorFD))))
+        listenerRunning = true;
+    else
+        EZP_OMNIPRINT("Could not launch thread\n");
+
+    pthread_mutex_unlock(&listenerLauncherLock);
+}
+
+//This function is not time critical
+void* EasyPerformanceAnalyzer::listenCmd(void* arg)
+{
+    char buf[100];
+    int cl,rc;
+    int acceptorFD = *((int*)arg);
+    EZP_OMNIPRINT("Listening to commands...\n");
+
+    while(true){
+        if ( (cl = accept(acceptorFD, NULL, NULL)) == -1) {
+            //perror("accept error");
+            continue;
+        }
+
+        while ( (rc=read(cl,buf,sizeof(buf))) > 0) {
+            EZP_OMNIPRINT("read %u bytes: %.*s\n", rc, rc, buf);
+        }
+        if (rc == -1) {
+            //perror("read");
+            exit(-1);
+        }
+        else if (rc == 0) {
+            EZP_OMNIPRINT("EOF\n");
+            close(cl);
+        }
+    }
+
+    //This function does and should return only when the process leaves
+}
+
+}
 

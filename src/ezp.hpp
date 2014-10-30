@@ -35,14 +35,24 @@
 #define EZP_SET_ANDROID_TAG(TAG) ezp::EasyPerformanceAnalyzer::androidTag = TAG;
 
 /**
- * @brief Turns analysis on
+ * @brief Turns on the analysis session, must be in this process
  */
 #define EZP_ENABLE ezp::EasyPerformanceAnalyzer::enabled = true;
 
 /**
- * @brief Turns analysis off completely
+ * @brief Turns off the analysis session, must be in this process
  */
 #define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false;
+
+/**
+ * @brief Turns on the analysis session that is in a potentially different process
+ */
+#define EZP_ENABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::cmdExternal(true);
+
+/**
+ * @brief Turns off the analysis session that is in a potentially different process
+ */
+#define EZP_DISABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::cmdExternal(false);
 
 /**
  * @brief Begins a real-time analysis block
@@ -93,13 +103,21 @@
 //Private API
 ///////////////////////////////////////////////////////////////////////////////
 
+#include<algorithm>
+#include<cerrno>
 #include<ctime>
 #include<map>
-#include<vector>
-#include<algorithm>
 #include<pthread.h>
-#include<sys/syscall.h>
 #include<unistd.h>
+#include<vector>
+
+#ifndef ANDROID
+#include<bits/local_lim.h>
+#endif
+
+#include<sys/socket.h>
+#include<sys/syscall.h>
+#include<sys/un.h>
 
 #ifdef ANDROID
 #include<android/log.h>
@@ -133,7 +151,8 @@ struct BlockKey_t{
      * @param tid_ Thread ID of the block's caller
      * @param blockName_ Hash of the name of the block
      */
-    BlockKey_t(TID tid_, unsigned int blockName_){
+    BlockKey_t(TID tid_, unsigned int blockName_)
+    {
         tid = tid_;
         blockName = blockName_;
     }
@@ -146,7 +165,8 @@ struct BlockKey_t{
      *
      * @return Whether first key is ahead of second key
      */
-    static bool compare(const struct BlockKey_t& one, const struct BlockKey_t& two){
+    static bool compare(const struct BlockKey_t& one, const struct BlockKey_t& two)
+    {
         if(one.tid == two.tid)
             return one.blockName > two.blockName;
         else
@@ -164,7 +184,10 @@ struct SmoothMarker_t{
     /**
      * @brief Creates a new smooth analysis record with zero history
      */
-    SmoothMarker_t(){ lastSlice = 0.0f; }
+    SmoothMarker_t()
+    {
+        lastSlice = 0.0f;
+    }
 };
 
 /**
@@ -178,7 +201,11 @@ struct AggregateMarker_t{
     /**
      * @brief Creates a new aggregate analysis with zero history
      */
-    AggregateMarker_t(){ totalTime = 0.0f; numSamples = 0; }
+    AggregateMarker_t()
+    {
+        totalTime = 0.0f;
+        numSamples = 0;
+    }
 };
 
 /**
@@ -232,7 +259,8 @@ struct SummedProfile_t{
      * @param totalTime_ Initial total time coming from a thread
      * @param numSamples_ Initial number of times this profile was done, coming from a thread
      */
-    SummedProfile_t(unsigned int blockName_, float totalTime_, int numSamples_){
+    SummedProfile_t(unsigned int blockName_, float totalTime_, int numSamples_)
+    {
         blockName = blockName_;
         totalTime = totalTime_;
         numSamples = numSamples_;
@@ -270,6 +298,13 @@ typedef std::pair<BlockKey, AggregateMarker*> Blk2AMarkerPair;
  */
 class EasyPerformanceAnalyzer{
 public:
+
+    /**
+     * @brief Sends a command to an analysis session in a different process
+     *
+     * @param enabled Whether to enable the analysis
+     */
+    static void cmdExternal(bool enabled);
 
     /**
      * @brief Starts a named analysis
@@ -356,6 +391,25 @@ private:
      */
     static void unhashStr(unsigned int hash, char* output);
 
+    /**
+     * @brief Launches the command listener thread if not already running
+     */
+    static void launchCmdListener();
+
+    /**
+     * @brief Accepts external connections to the UNIX socket and listens to commands forever
+     *
+     * @param arg Points to an int that is the file descriptor of the acceptor thread
+     *
+     * @return Nothing
+     */
+    static void* listenCmd(void* arg);
+
+    static const char* cmdSocketName;               ///< Name of the abstract UNIX socket
+    static pthread_t cmdListener;                   ///< Listens to external commands over a UNIX sockets
+    static pthread_mutex_t listenerLauncherLock;    ///< To not launch multiple listener threads
+    static bool listenerRunning;                    ///< Whether the listener thread is already launched
+
     static Blk2Clk blocks;              ///< Names and beginning times of analysis blocks
     static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed analysis blocks
     static Blk2AMarker offlineBlocks;   ///< Names, beginning times, total times and number of samples of offline analysis blocks
@@ -363,6 +417,7 @@ private:
     static pthread_mutex_t lock;        ///< Locks normal analysis record access
     static pthread_mutex_t smoothLock;  ///< Locks smooth analysis record access
     static pthread_mutex_t offlineLock; ///< Locks offline analysis record access
+
 };
 
 #ifdef ANDROID
