@@ -35,24 +35,29 @@
 #define EZP_SET_ANDROID_TAG(TAG) ezp::EasyPerformanceAnalyzer::androidTag = TAG;
 
 /**
- * @brief Turns on the analysis session, must be in this process
+ * @brief Launches the control listener; is launched when EZP_START* is called, no need to call it after that
  */
-#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::enabled = true;
+#define EZP_BEGIN_CONTROL ezp::EasyPerformanceAnalyzer::launchCmdListener();
 
 /**
- * @brief Turns off the analysis session, must be in this process
+ * @brief Turns on instrumentation for the analysis session that is in this process
  */
-#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false;
+#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::enabled = true; EZP_PRINT("EZP: Enabled instrumentation locally.\n");
 
 /**
- * @brief Turns on the analysis session that is in a potentially different process
+ * @brief Turns off instrumentation for the analysis session that is in this process
  */
-#define EZP_ENABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::cmdExternal(true);
+#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false; EZP_PRINT("EZP: Disabled instrumentation locally.\n");
 
 /**
- * @brief Turns off the analysis session that is in a potentially different process
+ * @brief Turns on instrumentation for the analysis session that is in a potentially different process
  */
-#define EZP_DISABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::cmdExternal(false);
+#define EZP_ENABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::control(true);
+
+/**
+ * @brief Turns off instrumentation for the analysis session that is in a potentially different process
+ */
+#define EZP_DISABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::control(false);
 
 /**
  * @brief Begins a real-time analysis block
@@ -105,15 +110,13 @@
 
 #include<algorithm>
 #include<cerrno>
+#include<cmath>
 #include<ctime>
 #include<map>
 #include<pthread.h>
 #include<unistd.h>
+#include<string>
 #include<vector>
-
-#ifndef ANDROID
-#include<bits/local_lim.h>
-#endif
 
 #include<sys/socket.h>
 #include<sys/syscall.h>
@@ -122,6 +125,7 @@
 #ifdef ANDROID
 #include<android/log.h>
 #else
+#include<bits/local_lim.h>
 #include<cstdio>
 #endif
 
@@ -276,7 +280,7 @@ struct SummedProfile_t{
      */
     static bool compare(const struct SummedProfile_t& one, const struct SummedProfile_t& two)
     {
-        return one.totalTime/one.numSamples > two.totalTime/two.numSamples;
+        return (one.numSamples == 0 ? -1 : one.totalTime/one.numSamples) > (two.numSamples == 0 ? -1 : two.totalTime/two.numSamples);
     }
 };
 
@@ -304,7 +308,7 @@ public:
      *
      * @param enabled Whether to enable the analysis
      */
-    static void cmdExternal(bool enabled);
+    static void control(bool enabled);
 
     /**
      * @brief Starts a named analysis
@@ -359,6 +363,11 @@ public:
      */
     static void clearOfflineProfiles();
 
+    /**
+     * @brief Launches the command listener thread if not already running
+     */
+    static void launchCmdListener();
+
     static const char* androidTag;      ///< Logcat tag on Android
     static bool enabled;                ///< Whether analysis is enabled
 
@@ -392,11 +401,6 @@ private:
     static void unhashStr(unsigned int hash, char* output);
 
     /**
-     * @brief Launches the command listener thread if not already running
-     */
-    static void launchCmdListener();
-
-    /**
      * @brief Accepts external connections to the UNIX socket and listens to commands forever
      *
      * @param arg Points to an int that is the file descriptor of the acceptor thread
@@ -405,10 +409,10 @@ private:
      */
     static void* listenCmd(void* arg);
 
+    static bool listenerRunning;                    ///< Whether the command listener thread is already launched
     static const char* cmdSocketName;               ///< Name of the abstract UNIX socket
     static pthread_t cmdListener;                   ///< Listens to external commands over a UNIX sockets
     static pthread_mutex_t listenerLauncherLock;    ///< To not launch multiple listener threads
-    static bool listenerRunning;                    ///< Whether the listener thread is already launched
 
     static Blk2Clk blocks;              ///< Names and beginning times of analysis blocks
     static Blk2SMarker smoothBlocks;    ///< Names, beginning times and latest time slices of smoothed analysis blocks
@@ -421,9 +425,11 @@ private:
 };
 
 #ifdef ANDROID
-#define EZP_OMNIPRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PERR(...) __android_log_print(ANDROID_LOG_ERROR, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
 #else
-#define EZP_OMNIPRINT(...) printf(__VA_ARGS__)
+#define EZP_PRINT(...) printf(__VA_ARGS__)
+#define EZP_PERR(...) fprintf(stderr,__VA_ARGS__)
 #endif
 
 } /* namespace ezp */
