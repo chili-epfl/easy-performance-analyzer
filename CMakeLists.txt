@@ -12,16 +12,18 @@ message(STATUS "")
 
 #Main lib
 add_library(ezp STATIC src/ezp.cpp)
-set_target_properties(ezp PROPERTIES COMPILE_FLAGS "-O3")
+set_target_properties(ezp PROPERTIES COMPILE_FLAGS "-O3 -fPIC")
 if(DEFINED ANDROID)
     target_link_libraries(ezp log)
+else()
+    target_link_libraries(ezp pthread)
 endif()
 install(TARGETS ezp ARCHIVE DESTINATION lib)
 install(FILES src/ezp.hpp DESTINATION include)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/ CACHE PATH "Output directory for binaries")
 
 #Samples
 if(WITH_SAMPLES)
     add_subdirectory(samples)
-    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/samples/bin/ CACHE PATH "Output directory for sample binaries")
 endif()
 
