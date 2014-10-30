@@ -63,6 +63,8 @@ int main(){
         maxendtime[b] = 0;
     }
 
+    printf("Beginning instrumentation performance measurement\n");
+
     EZP_ENABLE
 
     //Measure nblocks many blocks, nsamples times each
@@ -93,6 +95,7 @@ int main(){
         }
 
     //Print statistics
+    printf("==============================================\n");
     for(int b=0;b<nblocks;b++){
         avgstarttimes[b] /= nsamples;
         avgendtimes[b] /= nsamples;
@@ -100,9 +103,8 @@ int main(){
                 b, avgstarttimes[b], maxstarttime[b], minstarttime[b], avgendtimes[b], maxendtime[b], minendtime[b]);
     }
 
-    printf("==============================================\n");
-
     //Print summed statistics
+    printf("==============================================\n");
     unsigned long long int maxtime = 0, mintime = UINT_MAX;
     unsigned long long int avgtime = 0;
     for(int b=0;b<nblocks;b++){

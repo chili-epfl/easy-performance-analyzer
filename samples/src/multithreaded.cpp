@@ -22,12 +22,15 @@
  * @date 2014-10-19
  */
 
+#include<cstdio>
 #include<pthread.h>
 
 #include<ezp.hpp>
 
 void* run(void* id){
     int* y = new int;
+
+    printf("Thread launched\n");
 
     EZP_ENABLE
 
@@ -50,6 +53,8 @@ void* run(void* id){
 
     }
     EZP_END_OFFLINE("ALL")
+
+    printf("Thread exited\n");
 
     pthread_exit(NULL);
 }

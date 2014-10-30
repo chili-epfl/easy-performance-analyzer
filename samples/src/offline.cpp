@@ -27,6 +27,8 @@
 int main(){
     int* y = new int;
 
+    printf("Instrumented code running...\n");
+
     EZP_ENABLE
 
     EZP_START_OFFLINE("ALL")
