@@ -27,7 +27,7 @@
 int main(int argc, char** argv){
     int* y = new int;
 
-    printf("%s: Instrumented code running, call `ezp_control --enable` to enable and `ezp_control --disable` to disable analysis on demand.\n",argv[0]);
+    printf("%s: Instrumented code running, run `ezp_control --enable` to remotely enable and `ezp_control --disable` to remotely disable analysis on demand.\n",argv[0]);
 
     while(true){
 
