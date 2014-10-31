@@ -16,10 +16,10 @@
  */
 
 /**
- * @file offline.cpp
- * @brief easy-performance-analyzer demo that shows basic offline usage
+ * @file external-control.cpp
+ * @brief easy-performance-analyzer demo that demonstrates the usage of ezp_control to enable analysis from outside the process
  * @author Ayberk Özgür
- * @date 2014-10-19
+ * @date 2014-10-17
  */
 
 #include<ezp.hpp>
@@ -27,31 +27,18 @@
 int main(int argc, char** argv){
     int* y = new int;
 
-    printf("%s: Instrumented code running...\n", argv[0]);
+    printf("%s: Instrumented code running, run `ezp_control --enable` to remotely enable and `ezp_control --disable` to remotely disable analysis on demand.\n",argv[0]);
 
-    EZP_ENABLE
+    while(true){
 
-    EZP_START_OFFLINE("ALL")
-    for(int i=0;i<100;i++){
-
-        EZP_START_OFFLINE("LP1")
-        for(int j=0;j<10000000;j++){
-            *y += 28138481u;
-            *y = 623415232 % *y;
-        }
-        EZP_END_OFFLINE("LP1")
-
-        EZP_START_OFFLINE("LP2")
+        EZP_START_SMOOTH("LP2")
         for(int j=0;j<10000000;j++){
             *y += 51;
             *y = *y % 101;
         }
-        EZP_END_OFFLINE("LP2")
+        EZP_END_SMOOTH("LP2")
 
     }
-    EZP_END_OFFLINE("ALL")
-
-    EZP_PRINT_OFFLINE
 
     return 0;
 }

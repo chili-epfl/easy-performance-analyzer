@@ -27,17 +27,42 @@
 namespace ezp{
 
 ///////////////////////////////////////////////////////////////////////////////
+//Platform-dependent defs
+///////////////////////////////////////////////////////////////////////////////
+
+#define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
+#ifdef ANDROID
+#define EZP_GET_TID gettid()
+#else
+#define EZP_GET_TID syscall(SYS_gettid)
+#endif
+
+#ifdef ANDROID
+#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PERR(...) (ezp::EasyPerformanceAnalyzer::forceStderr ? fprintf(stderr,__VA_ARGS__) :__android_log_print(ANDROID_LOG_ERROR, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__))
+#else
+#define EZP_PRINT(...) printf(__VA_ARGS__)
+#define EZP_PERR(...) fprintf(stderr,__VA_ARGS__)
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 //Static members
 ///////////////////////////////////////////////////////////////////////////////
 
 const char* EasyPerformanceAnalyzer::androidTag = "EZP";
+const char* EasyPerformanceAnalyzer::cmdSocketName = "\0ezp_control";
 
+pthread_t EasyPerformanceAnalyzer::cmdListener;
+
+bool EasyPerformanceAnalyzer::listenerRunning = false;
 bool EasyPerformanceAnalyzer::enabled = false;
+bool EasyPerformanceAnalyzer::forceStderr = false;
 
 Blk2Clk EasyPerformanceAnalyzer::blocks(BlockKey::compare);
 Blk2SMarker EasyPerformanceAnalyzer::smoothBlocks(BlockKey::compare);
 Blk2AMarker EasyPerformanceAnalyzer::offlineBlocks(BlockKey::compare);
 
+pthread_mutex_t EasyPerformanceAnalyzer::listenerLauncherLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::smoothLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER;
@@ -46,15 +71,60 @@ pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER
 //Functions
 ///////////////////////////////////////////////////////////////////////////////
 
+//This function is not time critical
+void EasyPerformanceAnalyzer::controlRemote(bool enabled)
+{
+    struct sockaddr_un addr;
+    int fd;
+
+    if((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        EZP_PERR("EZP: socket() error: %s\n",strerror(errno));
+        return;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, cmdSocketName, sizeof(addr.sun_path) - 1);
+
+    if(connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1){
+        EZP_PERR("EZP: connect() error: %s\n",strerror(errno));
+        EZP_PERR("EZP: Make sure that there is an EZP instrumented code running on this machine.\n");
+        EZP_PERR("EZP: Control listener does not start until the first EZP_START* or EZP_BEGIN_CONTROL is encountered!\n");
+        return;
+    }
+
+    int ret;
+    if(enabled)
+        ret = write(fd,"e",2);
+    else
+        ret = write(fd,"d",2);
+    if(ret < 0)
+        EZP_PERR("EZP: write() error: %s\n",strerror(errno));
+    else if(ret < 2)
+        EZP_PERR("EZP: write() error: Could not write command completely\n");
+
+    close(fd);
+}
+
+//This function is not time critical
+void EasyPerformanceAnalyzer::control(bool enabled)
+{
+    EasyPerformanceAnalyzer::enabled = enabled;
+    if(enabled)
+        EZP_PRINT("EZP: Enabled local instrumentation.\n");
+    else
+        EZP_PRINT("EZP: Disabled local instrumentation.\n");
+}
+
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     Timespec* begin = new Timespec();
-
     BlkClkPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
 
     pthread_mutex_lock(&lock);
@@ -64,6 +134,7 @@ void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&lock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,begin);
     }
 
@@ -73,6 +144,7 @@ void EasyPerformanceAnalyzer::startProfiling(const char* blockName)
         Timespec* target = result.first->second;
         pthread_mutex_unlock(&lock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,target);
     }
 }
@@ -94,23 +166,24 @@ void EasyPerformanceAnalyzer::endProfiling(const char* blockName)
     if(pairIt == blocks.end()){
         pthread_mutex_unlock(&lock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START(\"%s\")?\n", blockName, blockName);
+        EZP_PERR("EZP: Can't find %s, did you call EZP_START(\"%s\")?\n", blockName, blockName);
     }
     else{
         Timespec* begin = pairIt->second;
         pthread_mutex_unlock(&lock);
 
-        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName, getTimeDiff(begin,&end));
+        EZP_PRINT("EZP: [%d]\t%s\t%6.2f ms\n", tid, blockName, getTimeDiff(begin,&end));
     }
 }
 
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     SmoothMarker* begin = new SmoothMarker();
 
     Blk2SMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
@@ -122,6 +195,7 @@ void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&smoothLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(begin->beginTime));
     }
 
@@ -131,6 +205,7 @@ void EasyPerformanceAnalyzer::startProfilingSmooth(const char* blockName)
         SmoothMarker* target = result.first->second;
         pthread_mutex_unlock(&smoothLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(target->beginTime));
     }
 }
@@ -152,24 +227,25 @@ void EasyPerformanceAnalyzer::endProfilingSmooth(const char* blockName, float sf
     if(pairIt == smoothBlocks.end()){
         pthread_mutex_unlock(&smoothLock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_SMOOTH(\"%s\")?\n", blockName, blockName);
+        EZP_PERR("EZP: Can't find %s, did you call EZP_START_SMOOTH(\"%s\")?\n", blockName, blockName);
     }
     else{
         float slice = sf*pairIt->second->lastSlice + (1.0f - sf)*getTimeDiff(&(pairIt->second->beginTime),&end);
         pairIt->second->lastSlice = slice;
         pthread_mutex_unlock(&smoothLock);
 
-        EZP_OMNIPRINT("[%d]\t%s\t%6.2f ms\n", tid, blockName, slice);
+        EZP_PRINT("EZP: [%d]\t%s\t~%6.2f ms\n", tid, blockName, slice);
     }
 }
 
 //This function is time critical!
 void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
 {
-    if(!enabled)
-        return;
+    //Record begin time even if not enabled to ensure mid-block enabling works
 
-    //Get time in the very end to disturb the measurements the least possible
+    if(!listenerRunning)
+        launchCmdListener();
+
     AggregateMarker* begin = new AggregateMarker();
 
     Blk2AMarkerPair pair(BlockKey(EZP_GET_TID, hashStr(blockName)), begin);
@@ -181,6 +257,7 @@ void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
     if(result.second){
         pthread_mutex_unlock(&offlineLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(begin->beginTime));
     }
 
@@ -190,6 +267,7 @@ void EasyPerformanceAnalyzer::startProfilingOffline(const char* blockName)
         AggregateMarker* target = result.first->second;
         pthread_mutex_unlock(&offlineLock);
 
+        //Get time in the very end to disturb the measurements the least possible
         clock_gettime(EZP_CLOCK,&(target->beginTime));
     }
 }
@@ -210,7 +288,7 @@ void EasyPerformanceAnalyzer::endProfilingOffline(const char* blockName)
     if(pairIt == offlineBlocks.end()){
         pthread_mutex_unlock(&offlineLock);
 
-        EZP_OMNIPRINT("EZP ERROR: Can't find %s, did you call EZP_START_OFFLINE(\"%s\")?\n", blockName, blockName);
+        EZP_PERR("EZP: Can't find %s, did you call EZP_START_OFFLINE(\"%s\")?\n", blockName, blockName);
     }
     else{
         pairIt->second->numSamples++;
@@ -222,12 +300,9 @@ void EasyPerformanceAnalyzer::endProfilingOffline(const char* blockName)
 //This function is not time critical
 void EasyPerformanceAnalyzer::printOfflineProfiles()
 {
-    if(!enabled)
-        return;
-
     pthread_mutex_lock(&offlineLock);
     if(offlineBlocks.size() == 0){
-        EZP_OMNIPRINT("EZP ERROR: No offline block found; instrument some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
+        EZP_PERR("EZP: No offline block found; instrument some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
         return;
     }
 
@@ -240,6 +315,8 @@ void EasyPerformanceAnalyzer::printOfflineProfiles()
         itt->blockName = its->first.blockName;
         itt->numSamples = its->second->numSamples;
         itt->averageTime = its->second->totalTime/itt->numSamples;
+        if(isnanf(itt->averageTime))
+            itt->averageTime = -1;
     }
     pthread_mutex_unlock(&offlineLock);
 
@@ -247,16 +324,20 @@ void EasyPerformanceAnalyzer::printOfflineProfiles()
     std::sort(sortedProfiles.begin(),sortedProfiles.end(),AggregateProfile::compareAvgTime);
 
     //Do the thread-wise printing
-    EZP_OMNIPRINT("=======================================================================\n");
-    EZP_OMNIPRINT("Thread-wise analysis results\n");
-    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
-    EZP_OMNIPRINT("Thread ID    Name    Average(ms)         Total(ms)           Calls     \n");
-    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    EZP_PRINT("EZP: ===============================================================================\n");
+    EZP_PRINT("EZP: Thread-wise analysis results\n");
+    EZP_PRINT("EZP: -------------------------------------------------------------------------------\n");
+    EZP_PRINT("EZP: Thread ID    Name    Average(ms)         Total(ms)           Calls\n");
+    EZP_PRINT("EZP: -------------------------------------------------------------------------------\n");
     char cbuf[5];
     for(std::vector<AggregateProfile>::iterator it = sortedProfiles.begin(); it != sortedProfiles.end(); it++){
         unhashStr(it->blockName,cbuf);
-        EZP_OMNIPRINT("%9d    %4s    %-16.2f    %-16.2f    %-10d\n",
-                it->tid, cbuf, it->averageTime, it->averageTime*it->numSamples, it->numSamples);
+        if(it->numSamples == 0)
+            EZP_PRINT("EZP: %9d    %4s    EZP_END_OFFLINE(\"%s\") was not present or was not enabled\n",
+                    it->tid, cbuf, cbuf);
+        else
+            EZP_PRINT("EZP: %9d    %4s    %-16.2f    %-16.2f    %-10d\n",
+                    it->tid, cbuf, it->averageTime, it->averageTime*it->numSamples, it->numSamples);
     }
 
     //Sort according to block name for summing
@@ -279,25 +360,26 @@ void EasyPerformanceAnalyzer::printOfflineProfiles()
     std::sort(totalProfiles.begin(),totalProfiles.end(),SummedProfile::compare);
 
     //Print summed profiles
-    EZP_OMNIPRINT("=======================================================================\n");
-    EZP_OMNIPRINT("Anaylsis results summed across threads\n");
-    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
-    EZP_OMNIPRINT("Name    Average(ms)         Total(ms)           Calls                  \n");
-    EZP_OMNIPRINT("-----------------------------------------------------------------------\n");
+    EZP_PRINT("EZP: ===============================================================================\n");
+    EZP_PRINT("EZP: Anaylsis results summed across threads\n");
+    EZP_PRINT("EZP: -------------------------------------------------------------------------------\n");
+    EZP_PRINT("EZP: Name    Average(ms)         Total(ms)           Calls\n");
+    EZP_PRINT("EZP: -------------------------------------------------------------------------------\n");
     for(std::vector<SummedProfile>::iterator it = totalProfiles.begin(); it != totalProfiles.end(); it++){
         unhashStr(it->blockName,cbuf);
-        EZP_OMNIPRINT("%4s    %-16.2f    %-16.2f    %-10d\n",
-                cbuf, it->totalTime/it->numSamples, it->totalTime, it->numSamples);
+        if(it->numSamples == 0)
+            EZP_PRINT("EZP: %4s    EZP_END_OFFLINE(\"%s\") was not present or was not enabled\n",
+                    cbuf, cbuf);
+        else
+            EZP_PRINT("EZP: %4s    %-16.2f    %-16.2f    %-10d\n",
+                    cbuf, it->totalTime/it->numSamples, it->totalTime, it->numSamples);
     }
-    EZP_OMNIPRINT("=======================================================================\n");
+    EZP_PRINT("EZP: ===============================================================================\n");
 }
 
 //This function is not time critical
 void EasyPerformanceAnalyzer::clearOfflineProfiles()
 {
-    if(!enabled)
-        return;
-
     pthread_mutex_lock(&offlineLock);
     //TODO: MEMORY LEAK: DELETE KEYS AND VALUES BEFORE CLEARING!!!!!!!!!!!!
     offlineBlocks.clear();
@@ -332,7 +414,7 @@ inline unsigned int EasyPerformanceAnalyzer::hashStr(const char* str)
 
     result += str[3];
     if(str[4] != '\0')
-        EZP_OMNIPRINT("EZP ERROR: Block name %s is too long, truncating to 4 characters; consider shortening the name for better performance\n", str);
+        EZP_PERR("EZP: Block name %s is too long, truncating to 4 characters\n", str);
     return result;
 }
 
@@ -353,5 +435,92 @@ inline void EasyPerformanceAnalyzer::unhashStr(unsigned int hash, char* output)
     output[0] = hash;
 }
 
-} /* namespace ezp */
+//This function is (mostly) not time critical
+void EasyPerformanceAnalyzer::launchCmdListener()
+{
+    pthread_mutex_lock(&listenerLauncherLock);
+
+    if(listenerRunning){ //Extra guard agains other threads entering this function at the same time
+        pthread_mutex_unlock(&listenerLauncherLock);
+        return;
+    }
+
+    struct sockaddr_un acceptorAddr;
+    int acceptorFD;
+
+    if((acceptorFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        EZP_PERR("EZP: socket() error: %s\n",strerror(errno));
+        return;
+    }
+
+    memset(&acceptorAddr, 0, sizeof(acceptorAddr));
+    acceptorAddr.sun_family = AF_UNIX;
+    strncpy(acceptorAddr.sun_path, cmdSocketName, sizeof(acceptorAddr.sun_path) - 1);
+
+    unlink(cmdSocketName);
+    if(bind(acceptorFD, (struct sockaddr*)&acceptorAddr, sizeof(acceptorAddr)) == -1){
+        EZP_PERR("EZP: bind() error: %s\n",strerror(errno));
+        EZP_PERR("EZP: Make sure that this is the only instrumented process running on this machine.\n");
+        EZP_PERR("EZP: There is no multiple EZP session functionality yet...\n");
+        exit(-1);
+    }
+    if(listen(acceptorFD, 5) == -1){
+        EZP_PERR("EZP: listen() error: %s\n",strerror(errno));
+        exit(-1);
+    }
+
+    pthread_attr_t* listenerAttr = new pthread_attr_t();
+    pthread_attr_init(listenerAttr);
+    pthread_attr_setdetachstate(listenerAttr, PTHREAD_CREATE_DETACHED);
+    pthread_attr_setguardsize(listenerAttr, 0);
+    pthread_attr_setstacksize(listenerAttr, PTHREAD_STACK_MIN); //This should be plenty
+    int ret = pthread_create(&cmdListener, listenerAttr, &EasyPerformanceAnalyzer::listenCmd, (void*)(new int(acceptorFD)));
+    if(!ret)
+        listenerRunning = true;
+    else
+        EZP_PERR("EZP: pthread_create() error: %s\n", strerror(ret));
+
+    pthread_mutex_unlock(&listenerLauncherLock);
+}
+
+//This function is not time critical
+void* EasyPerformanceAnalyzer::listenCmd(void* arg)
+{
+    char buf[2];
+    int ret;
+    int clientFD;
+    int acceptorFD = *((int*)arg);
+    EZP_PRINT("EZP: [%d]\tCommand listener running...\n",(unsigned int)EZP_GET_TID);
+
+    while(true){
+        if((clientFD = accept(acceptorFD, NULL, NULL)) == -1) {
+            EZP_PERR("EZP: accept() error: %s\n",strerror(errno));
+            continue;
+        }
+
+        ret = read(clientFD, buf, sizeof(buf));
+        if(ret == 2){
+            if(buf[0] == 'e'){
+                enabled = true;
+                EZP_PRINT("EZP: Enabled instrumentation externally.\n");
+            }
+            else if(buf[0] == 'd'){
+                enabled = false;
+                EZP_PRINT("EZP: Disabled instrumentation externally.\n");
+            }
+            else
+                EZP_PERR("EZP: Unknown command received: %c\n", buf[0]);
+        }
+        else if(ret == -1)
+            EZP_PERR("EZP: read() error: %s\n", strerror(errno));
+        else
+            EZP_PERR("EZP: Received %d bytes in read(), must receive 2 bytes\n", ret);
+
+        close(clientFD);
+    }
+
+    //This function should and does return only when the process leaves
+}
+
+}
 
