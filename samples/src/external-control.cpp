@@ -27,16 +27,23 @@
 int main(int argc, char** argv){
     int* y = new int;
 
-    printf("%s: Instrumented code running, run `ezp_control --enable` to remotely enable and `ezp_control --disable` to remotely disable analysis on demand.\n",argv[0]);
+    printf("%s: Instrumented code running, run `ezp_control --enable` to remotely enable instrumentation, `ezp_control --disable` to remotely disable instrumentation, `ezp_control --print` to print offline analysis information and `ezp_control --clear` to clear offline analysis history on demand.\n",argv[0]);
 
     while(true){
 
-        EZP_START_SMOOTH("LP2")
+        EZP_START_OFFLINE("OFLN")
         for(int j=0;j<10000000;j++){
             *y += 51;
             *y = *y % 101;
         }
-        EZP_END_SMOOTH("LP2")
+        EZP_END_OFFLINE("OFLN")
+
+        EZP_START_SMOOTH("REAL")
+        for(int j=0;j<10000000;j++){
+            *y += 51;
+            *y = *y % 101;
+        }
+        EZP_END_SMOOTH("REAL")
 
     }
 

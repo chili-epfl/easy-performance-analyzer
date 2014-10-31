@@ -28,27 +28,32 @@
 
 #include"ezp.hpp"
 
+using namespace std;
+
 void printHelp(bool desc){
-    using namespace std;
     cout << "Usage: ezp_control [OPTION]" << endl;
     if(desc)
-        cout << "Controls an already running EZP session in an external process." << std::endl;
+        cout << "Controls an already running EZP session in an external process." << endl;
     cout << endl;
-    cout << "  -e, --enable     Enables the EZP session present on this machine" << std::endl;
-    cout << "  -d, --disable    Disables the EZP session present on this machine" << std::endl;
-    cout << "  -h, --help       Displays this message" << std::endl;
+    cout << "  -e, --enable     Enables instrumentation" << endl;
+    cout << "  -d, --disable    Disables instrumentation" << endl;
+    cout << "  -p, --print      Prints all information on offline analyses" << endl;
+    cout << "  -c, --clear      Clears all offline analysis history" << endl;
+    cout << "  -h, --help       Displays this message" << endl;
 }
 
 int main(int argc, char** argv){
     struct option options[] = {
-        {"enable",  no_argument,    NULL, 'e'},
-        {"disable", no_argument,    NULL, 'd'},
-        {"help",    no_argument,    NULL, 'h'}
+        {"enable",  no_argument,    NULL,   'e'},
+        {"disable", no_argument,    NULL,   'd'},
+        {"print",   no_argument,    NULL,   'p'},
+        {"clear",   no_argument,    NULL,   'c'},
+        {"help",    no_argument,    NULL,   'h'}
     };
 
     int i = 0;
     while (true)
-        switch(getopt_long(argc, argv, "edh", options, &i)){
+        switch(getopt_long(argc, argv, "edpch", options, &i)){
             case 'e':
                 EZP_FORCE_STDERR_ON
                 EZP_ENABLE_REMOTE
@@ -56,6 +61,14 @@ int main(int argc, char** argv){
             case 'd':
                 EZP_FORCE_STDERR_ON
                 EZP_DISABLE_REMOTE
+                return 0;
+            case 'p':
+                EZP_FORCE_STDERR_ON
+                EZP_PRINT_OFFLINE_REMOTE
+                return 0;
+            case 'c':
+                EZP_FORCE_STDERR_ON
+                EZP_CLEAR_OFFLINE_REMOTE
                 return 0;
             case 'h':
                 printHelp(true);

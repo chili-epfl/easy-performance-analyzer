@@ -42,12 +42,12 @@
 /**
  * @brief Turns on instrumentation for the analysis session that is in this process
  */
-#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::control(true);
+#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::control(ezp::EasyPerformanceAnalyzer::CMD_ENABLE);
 
 /**
  * @brief Turns off instrumentation for the analysis session that is in this process
  */
-#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::control(false);
+#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::control(ezp::EasyPerformanceAnalyzer::CMD_DISABLE);
 
 /**
  * @brief Forces error messages to stderr instead of Logcat on Android
@@ -62,12 +62,12 @@
 /**
  * @brief Turns on instrumentation for the analysis session that is in a potentially different process
  */
-#define EZP_ENABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(true);
+#define EZP_ENABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(ezp::EasyPerformanceAnalyzer::CMD_ENABLE);
 
 /**
  * @brief Turns off instrumentation for the analysis session that is in a potentially different process
  */
-#define EZP_DISABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(false);
+#define EZP_DISABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(ezp::EasyPerformanceAnalyzer::CMD_DISABLE);
 
 /**
  * @brief Begins a real-time analysis block
@@ -105,14 +105,24 @@
 #define EZP_END_OFFLINE(BLOCK_NAME) ezp::EasyPerformanceAnalyzer::endProfilingOffline(BLOCK_NAME);
 
 /**
- * @brief Prints average and total times and numbers of execution of all offline analysis blocks
+ * @brief Prints average and total times and numbers of execution of all offline analysis blocks in this process
  */
 #define EZP_PRINT_OFFLINE ezp::EasyPerformanceAnalyzer::printOfflineProfiles();
 
 /**
- * @brief Erases the offline analysis history
+ * @brief Erases the offline analysis history in this process
  */
 #define EZP_CLEAR_OFFLINE ezp::EasyPerformanceAnalyzer::clearOfflineProfiles();
+
+/**
+ * @brief Prints average and total times and numbers of execution of all offline analysis blocks in a potentially different process
+ */
+#define EZP_PRINT_OFFLINE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(ezp::EasyPerformanceAnalyzer::CMD_PRINT);
+
+/**
+ * @brief Erases the offline analysis history in a potentially different process
+ */
+#define EZP_CLEAR_OFFLINE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(ezp::EasyPerformanceAnalyzer::CMD_CLEAR);
 
 ///////////////////////////////////////////////////////////////////////////////
 //Private API
@@ -306,18 +316,28 @@ class EasyPerformanceAnalyzer{
 public:
 
     /**
+     * @brief List of possible remote/local commands
+     */
+    enum Command{
+        CMD_ENABLE,     ///< Enable instrumentation
+        CMD_DISABLE,    ///< Disable instrumentation
+        CMD_PRINT,      ///< Print information on offline analyses
+        CMD_CLEAR       ///< Clear offline analysis history
+    };
+
+    /**
      * @brief Sends a command to an analysis session in a different process
      *
-     * @param enabled Whether instrumentation should be enabled
+     * @param cmd Command to send
      */
-    static void controlRemote(bool enabled);
+    static void controlRemote(Command cmd);
 
     /**
      * @brief Controls the analysis session in this process
      *
-     * @param enabled Whether instrumentation should be enabled
+     * @param cmd Command to execute
      */
-    static void control(bool enabled);
+    static void control(Command cmd);
 
     /**
      * @brief Starts a named analysis

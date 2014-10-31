@@ -72,7 +72,7 @@ pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER
 ///////////////////////////////////////////////////////////////////////////////
 
 //This function is not time critical
-void EasyPerformanceAnalyzer::controlRemote(bool enabled)
+void EasyPerformanceAnalyzer::controlRemote(Command cmd)
 {
     struct sockaddr_un addr;
     int fd;
@@ -94,10 +94,20 @@ void EasyPerformanceAnalyzer::controlRemote(bool enabled)
     }
 
     int ret;
-    if(enabled)
-        ret = write(fd,"e",2);
-    else
-        ret = write(fd,"d",2);
+    switch(cmd){
+        case CMD_ENABLE:
+            ret = write(fd,"e",2);
+            break;
+        case CMD_DISABLE:
+            ret = write(fd,"d",2);
+            break;
+        case CMD_PRINT:
+            ret = write(fd,"p",2);
+            break;
+        case CMD_CLEAR:
+            ret = write(fd,"c",2);
+            break;
+    }
     if(ret < 0)
         EZP_PERR("EZP: write() error: %s\n",strerror(errno));
     else if(ret < 2)
@@ -107,13 +117,24 @@ void EasyPerformanceAnalyzer::controlRemote(bool enabled)
 }
 
 //This function is not time critical
-void EasyPerformanceAnalyzer::control(bool enabled)
+void EasyPerformanceAnalyzer::control(Command cmd)
 {
-    EasyPerformanceAnalyzer::enabled = enabled;
-    if(enabled)
-        EZP_PRINT("EZP: Enabled local instrumentation.\n");
-    else
-        EZP_PRINT("EZP: Disabled local instrumentation.\n");
+    switch(cmd){
+        case CMD_ENABLE:
+            enabled = true;
+            EZP_PRINT("EZP: Enabled local instrumentation.\n");
+            break;
+        case CMD_DISABLE:
+            enabled = false;
+            EZP_PRINT("EZP: Disabled local instrumentation.\n");
+            break;
+        case CMD_PRINT:
+            printOfflineProfiles();
+            break;
+        case CMD_CLEAR:
+            clearOfflineProfiles();
+            break;
+    }
 }
 
 //This function is time critical!
@@ -501,16 +522,27 @@ void* EasyPerformanceAnalyzer::listenCmd(void* arg)
 
         ret = read(clientFD, buf, sizeof(buf));
         if(ret == 2){
-            if(buf[0] == 'e'){
-                enabled = true;
-                EZP_PRINT("EZP: Enabled instrumentation externally.\n");
+            switch(buf[0]){
+                case 'e':
+                    enabled = true;
+                    EZP_PRINT("EZP: Enabled instrumentation upon remote request.\n");
+                    break;
+                case 'd':
+                    enabled = false;
+                    EZP_PRINT("EZP: Disabled instrumentation upon remote request.\n");
+                    break;
+                case 'p':
+                    printOfflineProfiles();
+                    EZP_PRINT("EZP: Printed offline analyses upon remote request.\n");
+                    break;
+                case 'c':
+                    clearOfflineProfiles();
+                    EZP_PRINT("EZP: Cleared offline analysis history upon remote request.\n");
+                    break;
+                default:
+                    EZP_PERR("EZP: Unknown command received: %c\n", buf[0]);
+                    break;
             }
-            else if(buf[0] == 'd'){
-                enabled = false;
-                EZP_PRINT("EZP: Disabled instrumentation externally.\n");
-            }
-            else
-                EZP_PERR("EZP: Unknown command received: %c\n", buf[0]);
         }
         else if(ret == -1)
             EZP_PERR("EZP: read() error: %s\n", strerror(errno));
