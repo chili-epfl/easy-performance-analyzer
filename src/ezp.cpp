@@ -303,6 +303,7 @@ void EasyPerformanceAnalyzer::printOfflineProfiles()
     pthread_mutex_lock(&offlineLock);
     if(offlineBlocks.size() == 0){
         EZP_PERR("EZP: No offline block found; instrument some code first by wrapping it with EZP_START_OFFLINE() ... EZP_END_OFFLINE()\n");
+        pthread_mutex_unlock(&offlineLock);
         return;
     }
 

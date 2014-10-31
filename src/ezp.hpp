@@ -142,7 +142,6 @@
 namespace ezp{
 
 typedef pid_t TID;
-
 typedef struct timespec Timespec;
 
 /**
