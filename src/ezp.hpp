@@ -50,6 +50,16 @@
 #define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false; EZP_PRINT("EZP: Disabled instrumentation locally.\n");
 
 /**
+ * @brief Forces error messages to stderr instead of Logcat on Android
+ */
+#define EZP_FORCE_STDERR_ON ezp::EasyPerformanceAnalyzer::forceStderr = true;
+
+/**
+ * @brief Starts sending error messages to Logcat on Android
+ */
+#define EZP_FORCE_STDERR_OFF ezp::EasyPerformanceAnalyzer::forceStdErr = false;
+
+/**
  * @brief Turns on instrumentation for the analysis session that is in a potentially different process
  */
 #define EZP_ENABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::control(true);
@@ -370,6 +380,7 @@ public:
 
     static const char* androidTag;      ///< Logcat tag on Android
     static bool enabled;                ///< Whether analysis is enabled
+    static bool forceStderr;            ///< Whether to force error messages to stderr instead of Logcat on Android
 
 private:
 
@@ -425,8 +436,8 @@ private:
 };
 
 #ifdef ANDROID
-#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
-#define EZP_PERR(...) __android_log_print(ANDROID_LOG_ERROR, EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PERR(...) (ezp::EasyPerformanceAnalyzer::forceStderr ? fprintf(stderr,__VA_ARGS__) :__android_log_print(ANDROID_LOG_ERROR, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__))
 #else
 #define EZP_PRINT(...) printf(__VA_ARGS__)
 #define EZP_PERR(...) fprintf(stderr,__VA_ARGS__)

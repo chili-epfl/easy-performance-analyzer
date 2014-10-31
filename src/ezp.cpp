@@ -37,6 +37,7 @@ pthread_t EasyPerformanceAnalyzer::cmdListener;
 
 bool EasyPerformanceAnalyzer::listenerRunning = false;
 bool EasyPerformanceAnalyzer::enabled = false;
+bool EasyPerformanceAnalyzer::forceStderr = false;
 
 Blk2Clk EasyPerformanceAnalyzer::blocks(BlockKey::compare);
 Blk2SMarker EasyPerformanceAnalyzer::smoothBlocks(BlockKey::compare);
