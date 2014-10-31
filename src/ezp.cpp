@@ -402,8 +402,11 @@ void EasyPerformanceAnalyzer::printOfflineProfiles()
 //This function is not time critical
 void EasyPerformanceAnalyzer::clearOfflineProfiles()
 {
+    //We will tolerate the memory leak caused by not freeing the one AggregateMarker per instrumentation block
+    //In order to free them, pthread lock must be held until after the clock measurement to check for null pointer in endProfilingOffline()
+    //The disturbance in the measurements is not worth fixing the memory leak
+
     pthread_mutex_lock(&offlineLock);
-    //TODO: MEMORY LEAK: DELETE KEYS AND VALUES BEFORE CLEARING!!!!!!!!!!!!
     offlineBlocks.clear();
     pthread_mutex_unlock(&offlineLock);
 }
