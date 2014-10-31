@@ -14,8 +14,8 @@ Features:
   - Smoothing over time option
   - Offline aggregation option (like regular profiling)
   - Multithreading support
-  - Enable/disable instrumentation on-demand
-  - Enable/disable insrumentation externally, i.e from another process
+  - Control instrumentation on-demand
+  - Control instrumentation externally, i.e from another process
 
 Table of contents:
 
@@ -217,15 +217,14 @@ How to use
 
 3. **External control of instrumentation**
 
-  You can enable/disable instrumentation wihout using the `EZP_ENABLE` instrumentation within your code. For this, any one of `EZP_START*` or `EZP_BEGIN_CONTROL` instrumentation calls must be reached once in order to launch the command listener thread.
+  You can enable/disable instrumentation wihout using the `EZP_ENABLE` call within your code. For this, any one of `EZP_START*` or `EZP_BEGIN_CONTROL` instrumentation calls must be reached once in order to launch the command listener thread.
 
-  Run `ezp_control -e` to enable and `ezp_control -d` to disable instrumentation in your process that's running on the same machine.
+  Run `ezp_control -e` to enable instrumentation, `ezp_control -d` to disable instrumentation, `ezp_control -p` to print offline analysis information and `ezp_control -c` to clear offline analysis history.
 
-  On Android, you can run `ezp_control` from an `adb shell`. An even better method would be:
+  On Android, you can run `ezp_control` from an `adb shell` if you installed the binary to `/system/xbin` with the above method. An even better invocation would be:
 
   ```
-  adb shell ezp_control -e
-  adb shell ezp_control -d
+  adb shell ezp_control [COMMAND]
   ```
 
   There is no support for controlling multiple analysis sessions yet.
