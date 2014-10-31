@@ -225,25 +225,36 @@ How to use
 API Summary
 -----------
 
-  - `EZP_SET_ANDROID_TAG(TAG)` - Sets the Logcat tag of printed messages
-  - `EZP_BEGIN_CONTROL` - Forces the command listener thread to launch
-  - `EZP_ENABLE` - Enables all instrumentation in the local code
-  - `EZP_DISABLE` - Disables all instrumentation in the local code
-  - `EZP_ENABLE_REMOTE` - Enables all instrumentation remotely in a potentially different process
-  - `EZP_DISABLE_REMOTE` - Disables all instrumentation remotely in a potentially different process
-  - `EZP_FORCE_STDERR_ON ` - Forces error messages to `stderr` instead of Logcat on Android
-  - `EZP_FORCE_STDERR_OFF ` - Starts sending error messages to Logcat on Android
-  - `EZP_START(BLOCK_NAME)` - Begins a real-time analysis block
-  - `EZP_END(BLOCK_NAME)` - Ends a real-time analysis block and prints execution time
-  - `EZP_START_SMOOTH(BLOCK_NAME)`- Starts a smoothed real-time analysis block
-  - `EZP_END_SMOOTH(BLOCK_NAME)` - Ends a smoothed real-time analysis block and prints smoothed execution time using the history of measurements
-  - `EZP_END_SMOOTH_FACTOR(BLOCK_NAME,SMOOTHING_FACTOR)` - Ends a smoothed real-time analysis block and prints the smoothed execution time with custom smoothing factor
-  - `EZP_START_OFFLINE(BLOCK_NAME)` - Starts an offline analysis block
-  - `EZP_END_OFFLINE(BLOCK_NAME)` - Ends an offline analysis block
-  - `EZP_PRINT_OFFLINE` - Prints average and total times and numbers of execution of all offline analysis blocks
-  - `EZP_CLEAR_OFFLINE` - Erases the offline analysis history
+- Instrumentation calls for control:
 
-In all calls, `BLOCK_NAME` is maximum 4 characters long. Instrumentation is disabled on launch by default.
+  Name                           |Function
+  :------------------------------|:-----------
+  `EZP_SET_ANDROID_TAG(TAG)`     |Sets the Logcat tag of printed messages (default is `EZP`)
+  `EZP_BEGIN_CONTROL`            |Forces the command listener thread to launch
+  `EZP_ENABLE`                   |Enables all instrumentation in the local code
+  `EZP_DISABLE`                  |Disables all instrumentation in the local code
+  `EZP_ENABLE_REMOTE`            |Enables all instrumentation remotely in a potentially different process
+  `EZP_DISABLE_REMOTE`           |Disables all instrumentation remotely in a potentially different process
+  `EZP_FORCE_STDERR_ON `         |Forces error messages to `stderr` instead of Logcat on Android
+  `EZP_FORCE_STDERR_OFF `        |Starts sending error messages to Logcat on Android
+  `EZP_PRINT_OFFLINE`            |Prints all information on offline analysis blocks in the local code
+  `EZP_CLEAR_OFFLINE`            |Erases the offline analysis history in the local code
+  `EZP_PRINT_OFFLINE_REMOTE`     |Prints all information on offline analysis blocks in a potentially different process
+  `EZP_CLEAR_OFFLINE_REMOTE`     |Erases the offline analysis history in a potentially different process
+
+- Instrumentation calls for measurement:
+
+  Name                                          |Function
+  :---------------------------------------------|:--------------------------------
+  `EZP_START(BLOCK_NAME)`                       |Begins a real-time analysis block
+  `EZP_END(BLOCK_NAME)`                         |Ends a real-time analysis block and prints execution time
+  `EZP_START_SMOOTH(BLOCK_NAME)`                |Starts a smoothed real-time analysis block
+  `EZP_END_SMOOTH(BLOCK_NAME)`                  |Ends a smoothed real-time analysis block and prints smoothed execution time using the history of measurements
+  `EZP_END_SMOOTH_FACTOR(BLOCK_NAME,FACTOR)`    |Ends a smoothed real-time analysis block and prints the smoothed execution time with custom smoothing factor
+  `EZP_START_OFFLINE(BLOCK_NAME)`               |Starts an offline analysis block
+  `EZP_END_OFFLINE(BLOCK_NAME)`                 |Ends an offline analysis block
+
+  In all calls, `BLOCK_NAME` is maximum 4 characters long. Instrumentation is disabled on launch by default.
 
 Samples
 -------
