@@ -32,11 +32,16 @@ set_target_properties(instrumentation-performance-real-time PROPERTIES
 
 add_executable(instrumentation-performance-smoothed src/instrumentation-performance.cpp)
 set_target_properties(instrumentation-performance-smoothed PROPERTIES
-    COMPILE_FLAGS "-O3 -DEZP_SAMPLE_SMOOTH"
+    COMPILE_FLAGS "-O3 -DEZP_SAMPLE_SMOOTHED"
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
 add_executable(instrumentation-performance-offline src/instrumentation-performance.cpp)
 set_target_properties(instrumentation-performance-offline PROPERTIES
+    COMPILE_FLAGS "-O3"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
+add_executable(external-control src/external-control.cpp)
+set_target_properties(external-control PROPERTIES
     COMPILE_FLAGS "-O3"
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
@@ -48,6 +53,7 @@ target_link_libraries(multithreaded                             ezp)
 target_link_libraries(instrumentation-performance-real-time     ezp)
 target_link_libraries(instrumentation-performance-smoothed      ezp)
 target_link_libraries(instrumentation-performance-offline       ezp)
+target_link_libraries(external-control                          ezp)
 if(DEFINED ANDROID)
     target_link_libraries(real-time                             log)
     target_link_libraries(offline                               log)
@@ -57,6 +63,7 @@ if(DEFINED ANDROID)
     target_link_libraries(instrumentation-performance-real-time log)
     target_link_libraries(instrumentation-performance-smoothed  log)
     target_link_libraries(instrumentation-performance-offline   log)
+    target_link_libraries(external-control                      log)
 else()
     target_link_libraries(real-time                             pthread)
     target_link_libraries(offline                               pthread)
@@ -66,5 +73,6 @@ else()
     target_link_libraries(instrumentation-performance-real-time pthread)
     target_link_libraries(instrumentation-performance-smoothed  pthread)
     target_link_libraries(instrumentation-performance-offline   pthread)
+    target_link_libraries(external-control                      pthread)
 endif()
 

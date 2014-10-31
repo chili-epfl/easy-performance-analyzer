@@ -18,9 +18,21 @@ if(DEFINED ANDROID)
 else()
     target_link_libraries(ezp pthread)
 endif()
-install(TARGETS ezp ARCHIVE DESTINATION lib)
 install(FILES src/ezp.hpp DESTINATION include)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/ CACHE PATH "Output directory for binaries")
+install(TARGETS ezp ARCHIVE DESTINATION lib)
+
+#Controller binary
+add_executable(ezp_control src/ezp_control.cpp)
+set_target_properties(ezp_control PROPERTIES COMPILE_FLAGS "-O3")
+if(DEFINED ANDROID)
+    target_link_libraries(ezp_control ezp log)
+else()
+    target_link_libraries(ezp_control ezp pthread)
+endif()
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin/ CACHE PATH "Output directory for non-sample binaries")
+if(NOT DEFINED ANDROID)
+    install(TARGETS ezp_control RUNTIME DESTINATION bin)
+endif()
 
 #Samples
 if(WITH_SAMPLES)
