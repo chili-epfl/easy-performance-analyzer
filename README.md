@@ -17,6 +17,14 @@ Features:
   - Enable/disable instrumentation on-demand
   - Enable/disable insrumentation externally, i.e from another process
 
+Table of contents:
+
+  - [Linux Build](#user-content-linux-build)
+  - [Android Build](#user-content-android-build)
+  - [How to use](#user-content-how-to-use)
+  - [API Summary](#user-content-api-summary)
+  - [Samples](#user-content-samples)
+
 Linux Build
 -----------
 
