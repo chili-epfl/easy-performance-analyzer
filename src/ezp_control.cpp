@@ -51,11 +51,11 @@ int main(int argc, char** argv){
         switch(getopt_long(argc, argv, "edh", options, &i)){
             case 'e':
                 EZP_FORCE_STDERR_ON
-                EZP_ENABLE_EXTERNAL
+                EZP_ENABLE_REMOTE
                 return 0;
             case 'd':
                 EZP_FORCE_STDERR_ON
-                EZP_DISABLE_EXTERNAL
+                EZP_DISABLE_REMOTE
                 return 0;
             case 'h':
                 printHelp(true);

@@ -42,12 +42,12 @@
 /**
  * @brief Turns on instrumentation for the analysis session that is in this process
  */
-#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::enabled = true; EZP_PRINT("EZP: Enabled instrumentation locally.\n");
+#define EZP_ENABLE ezp::EasyPerformanceAnalyzer::control(true);
 
 /**
  * @brief Turns off instrumentation for the analysis session that is in this process
  */
-#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::enabled = false; EZP_PRINT("EZP: Disabled instrumentation locally.\n");
+#define EZP_DISABLE ezp::EasyPerformanceAnalyzer::control(false);
 
 /**
  * @brief Forces error messages to stderr instead of Logcat on Android
@@ -62,12 +62,12 @@
 /**
  * @brief Turns on instrumentation for the analysis session that is in a potentially different process
  */
-#define EZP_ENABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::control(true);
+#define EZP_ENABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(true);
 
 /**
  * @brief Turns off instrumentation for the analysis session that is in a potentially different process
  */
-#define EZP_DISABLE_EXTERNAL ezp::EasyPerformanceAnalyzer::control(false);
+#define EZP_DISABLE_REMOTE ezp::EasyPerformanceAnalyzer::controlRemote(false);
 
 /**
  * @brief Begins a real-time analysis block
@@ -140,13 +140,6 @@
 #endif
 
 namespace ezp{
-
-#define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
-#ifdef ANDROID
-#define EZP_GET_TID gettid()
-#else
-#define EZP_GET_TID syscall(SYS_gettid)
-#endif
 
 typedef pid_t TID;
 
@@ -316,7 +309,14 @@ public:
     /**
      * @brief Sends a command to an analysis session in a different process
      *
-     * @param enabled Whether to enable the analysis
+     * @param enabled Whether instrumentation should be enabled
+     */
+    static void controlRemote(bool enabled);
+
+    /**
+     * @brief Controls the analysis session in this process
+     *
+     * @param enabled Whether instrumentation should be enabled
      */
     static void control(bool enabled);
 
@@ -434,14 +434,6 @@ private:
     static pthread_mutex_t offlineLock; ///< Locks offline analysis record access
 
 };
-
-#ifdef ANDROID
-#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
-#define EZP_PERR(...) (ezp::EasyPerformanceAnalyzer::forceStderr ? fprintf(stderr,__VA_ARGS__) :__android_log_print(ANDROID_LOG_ERROR, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__))
-#else
-#define EZP_PRINT(...) printf(__VA_ARGS__)
-#define EZP_PERR(...) fprintf(stderr,__VA_ARGS__)
-#endif
 
 } /* namespace ezp */
 

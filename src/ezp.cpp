@@ -27,6 +27,25 @@
 namespace ezp{
 
 ///////////////////////////////////////////////////////////////////////////////
+//Platform-dependent defs
+///////////////////////////////////////////////////////////////////////////////
+
+#define EZP_CLOCK CLOCK_THREAD_CPUTIME_ID
+#ifdef ANDROID
+#define EZP_GET_TID gettid()
+#else
+#define EZP_GET_TID syscall(SYS_gettid)
+#endif
+
+#ifdef ANDROID
+#define EZP_PRINT(...) __android_log_print(ANDROID_LOG_INFO, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__)
+#define EZP_PERR(...) (ezp::EasyPerformanceAnalyzer::forceStderr ? fprintf(stderr,__VA_ARGS__) :__android_log_print(ANDROID_LOG_ERROR, ezp::EasyPerformanceAnalyzer::androidTag, __VA_ARGS__))
+#else
+#define EZP_PRINT(...) printf(__VA_ARGS__)
+#define EZP_PERR(...) fprintf(stderr,__VA_ARGS__)
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 //Static members
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -53,7 +72,7 @@ pthread_mutex_t EasyPerformanceAnalyzer::offlineLock = PTHREAD_MUTEX_INITIALIZER
 ///////////////////////////////////////////////////////////////////////////////
 
 //This function is not time critical
-void EasyPerformanceAnalyzer::control(bool enabled)
+void EasyPerformanceAnalyzer::controlRemote(bool enabled)
 {
     struct sockaddr_un addr;
     int fd;
@@ -85,6 +104,16 @@ void EasyPerformanceAnalyzer::control(bool enabled)
         EZP_PERR("EZP: write() error: Could not write command completely\n");
 
     close(fd);
+}
+
+//This function is not time critical
+void EasyPerformanceAnalyzer::control(bool enabled)
+{
+    EasyPerformanceAnalyzer::enabled = enabled;
+    if(enabled)
+        EZP_PRINT("EZP: Enabled local instrumentation.\n");
+    else
+        EZP_PRINT("EZP: Disabled local instrumentation.\n");
 }
 
 //This function is time critical!
