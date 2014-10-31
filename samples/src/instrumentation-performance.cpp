@@ -41,7 +41,7 @@
     #define EZP_SAMPLE_END EZP_END_OFFLINE
 #endif
 
-int main(){
+int main(int argc, char** argv){
     const int nsamples = 1000;
     const int nblocks = 1000;
 
@@ -63,7 +63,7 @@ int main(){
         maxendtime[b] = 0;
     }
 
-    printf("Beginning instrumentation performance measurement\n");
+    printf("%s: Beginning instrumentation performance measurement\n", argv[0]);
 
     EZP_ENABLE
 
@@ -95,16 +95,16 @@ int main(){
         }
 
     //Print statistics
-    printf("==============================================\n");
+    printf("%s: ==============================================\n", argv[0]);
     for(int b=0;b<nblocks;b++){
         avgstarttimes[b] /= nsamples;
         avgendtimes[b] /= nsamples;
-        printf("Block %4d -- average start: %6lld ns, max start: %6lld ns, min start: %6lld ns, average end: %6lld ns, max end: %6lld ns, min end: %6lld ns\n",
-                b, avgstarttimes[b], maxstarttime[b], minstarttime[b], avgendtimes[b], maxendtime[b], minendtime[b]);
+        printf("%s: Block %4d -- average start: %6lld ns, max start: %6lld ns, min start: %6lld ns, average end: %6lld ns, max end: %6lld ns, min end: %6lld ns\n",
+                argv[0], b, avgstarttimes[b], maxstarttime[b], minstarttime[b], avgendtimes[b], maxendtime[b], minendtime[b]);
     }
 
     //Print summed statistics
-    printf("==============================================\n");
+    printf("%s: ==============================================\n", argv[0]);
     unsigned long long int maxtime = 0, mintime = UINT_MAX;
     unsigned long long int avgtime = 0;
     for(int b=0;b<nblocks;b++){
@@ -119,7 +119,7 @@ int main(){
         avgtime += avgendtimes[b] + avgstarttimes[b];
     }
     avgtime /= 2*nblocks;
-    printf("Overall -- average: %6lld ns, max: %6lld ns, min: %6lld ns\n",avgtime,maxtime,mintime);
+    printf("%s: Overall -- average: %6lld ns, max: %6lld ns, min: %6lld ns\n", argv[0], avgtime, maxtime, mintime);
 
     return 0;
 }

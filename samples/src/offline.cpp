@@ -24,10 +24,10 @@
 
 #include<ezp.hpp>
 
-int main(){
+int main(int argc, char** argv){
     int* y = new int;
 
-    printf("Instrumented code running...\n");
+    printf("%s: Instrumented code running...\n", argv[0]);
 
     EZP_ENABLE
 

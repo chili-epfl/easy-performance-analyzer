@@ -27,12 +27,11 @@
 
 #include<ezp.hpp>
 
-void* run(void* id){
+void* run(void* arg){
     int* y = new int;
+    const char* cmd = (const char*)arg;
 
-    printf("Thread launched\n");
-
-    EZP_ENABLE
+    printf("%s: Thread launched\n", cmd);
 
     EZP_START_OFFLINE("ALL")
     for(int i=0;i<100;i++){
@@ -54,17 +53,19 @@ void* run(void* id){
     }
     EZP_END_OFFLINE("ALL")
 
-    printf("Thread exited\n");
+    printf("%s: Thread exited\n", cmd);
 
     pthread_exit(NULL);
 }
 
-int main(){
+int main(int argc, char** argv){
     int N = 4;
     pthread_t threads[N];
 
+    EZP_ENABLE
+
     for(int i=0;i<N;i++)
-        pthread_create(&threads[i],NULL,run,NULL);
+        pthread_create(&threads[i],NULL,run,(void*)argv[0]);
 
     for(int i=0;i<N;i++)
         pthread_join(threads[i],NULL);
