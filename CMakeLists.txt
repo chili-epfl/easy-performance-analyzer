@@ -12,7 +12,7 @@ message(STATUS "")
 
 #Main lib
 add_library(ezp STATIC src/ezp.cpp)
-set_target_properties(ezp PROPERTIES COMPILE_FLAGS "-O3 -fPIC")
+set_target_properties(ezp PROPERTIES COMPILE_FLAGS "-O3 -fPIC -Wall")
 if(DEFINED ANDROID)
     target_link_libraries(ezp log)
 else()
@@ -23,7 +23,7 @@ install(TARGETS ezp ARCHIVE DESTINATION lib)
 
 #Controller binary
 add_executable(ezp_control src/ezp_control.cpp)
-set_target_properties(ezp_control PROPERTIES COMPILE_FLAGS "-O3")
+set_target_properties(ezp_control PROPERTIES COMPILE_FLAGS "-O3 -Wall")
 if(DEFINED ANDROID)
     target_link_libraries(ezp_control ezp log)
 else()
