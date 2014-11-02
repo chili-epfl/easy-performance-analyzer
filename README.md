@@ -5,11 +5,11 @@ A simple cross-platform instrumented performance analysis tool:
 
   - Measures execution time of instrumented code blocks
   - With **1000** instrumented blocks, each sampled **1000** times, each instrumentation call takes (on average):
-    - **~543 cycles** (measured with `valgrind --tool=callgrind --cache-sim=yes --branch-sim=yes --simulate-wb=yes --simulate-hwpref=yes`)
-    - **~408 nanoseconds** (measured on Intel(R) Core(TM) i7-3537U)
+    - **~543 cycles** (measured on `x86_64` with `valgrind --tool=callgrind --cache-sim=yes --branch-sim=yes --simulate-wb=yes --simulate-hwpref=yes`)
+    - **~271 nanoseconds** (measured on Intel(R) Core(TM) i7-3537U with `instrumentation-performance-offline` sample)
   - With **1** instrumented block, sampled **1000000** times, each instrumentation call takes (on average):
-    - **~287 cycles** (measured as above)
-    - **~349 nanoseconds** (measured as above)
+    - **~287 cycles** (measured on `x86_64` as above)
+    - **~219 nanoseconds** (measured on Intel(R) Core(TM) i7-3537U as above)
 
 Features:
 
